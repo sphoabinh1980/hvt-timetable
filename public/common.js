@@ -24,6 +24,7 @@ export function teacherNameForLesson(code='',subject='',className='',fallback=''
   const subjectCode=String(subject||'').trim();
   const cls=String(className||'').trim();
 
+  // 4 mã trong TKBL1(3) đại diện cho 2 giáo viên khác nhau.
   if(teacherCode==='N.P.Nga'){
     if(subjectCode==='P') return 'Nguyễn Phương Nga';
     if(['V','TrN','TrNg'].includes(subjectCode)) return 'Ninh Phương Nga';
@@ -40,11 +41,14 @@ export function teacherNameForLesson(code='',subject='',className='',fallback=''
   }
 
   if(teacherCode==='P.T.Nga'){
-    if(['10P','12S','12SU'].includes(cls)) return 'Phạm Thị Nga';
-    if(['10TIN','11N','11P'].includes(cls)) return 'Phạm Thanh Nga';
+    if(['10P','12S','12SỬ','12SU'].includes(cls)) return 'Phạm Thị Nga';
+    if(['10TIN','10TN','11N','11P'].includes(cls)) return 'Phạm Thanh Nga';
   }
 
-  // Hỗ trợ phiên bản cũ đã import trước khi parser được sửa.
+  // Cùng một người nhưng nguồn có hai cách viết Thuý/Thúy.
+  if(teacherCode==='M.T.T.Ninh') return 'Mai Thị Thúy Ninh';
+
+  // Hỗ trợ một số phiên bản cũ đã import trước khi parser được sửa.
   if(teacherCode==='N.T.T.Hoan' && cls==='10N' && ['L','LY'].includes(subjectCode)) return 'Bùi Thị Hiền';
   if(teacherCode==='N.T.T.Hoan') return 'Ngô Thị Tố Hoan';
 
@@ -110,24 +114,19 @@ function renderSession(lessons, session, mode){
         html+='<div class="empty">—</div>';
       }else{
         for(const item of items){
+          const code=escapeHtml(item.subject);
+          const full=escapeHtml(subjectName(item.subject));
           if(mode==='class'){
-            const code=escapeHtml(item.subject);
-            const full=escapeHtml(subjectName(item.subject));
             const teacherCode=escapeHtml(item.teacherCode||'');
             const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.className,item.teacherName||''));
-            const raw=escapeHtml(item.raw||`${item.subject}${item.teacherCode?' - '+item.teacherCode:''}`);
-            html+=`<div class="lesson${items.length>1?' multiple':''}">
-              <div class="lesson-subject"><strong>${full}</strong><span class="subject-code">${code}</span></div>
-              <span class="lesson-teacher">GV: ${teacherCode || 'Chưa có mã GV'}</span>
-              ${teacherFull&&teacherFull!==teacherCode?`<span class="lesson-teacher-name">${teacherFull}</span>`:''}
-              <small class="lesson-raw">${raw}</small>
+            html+=`<div class="lesson compact${items.length>1?' multiple':''}" title="${full}${teacherFull?' · '+teacherFull:''}">
+              <strong class="lesson-main">${code}</strong>
+              <span class="lesson-secondary">${teacherCode || '—'}</span>
             </div>`;
           }else{
-            const full=escapeHtml(subjectName(item.subject));
-            const code=escapeHtml(item.subject);
-            html+=`<div class="lesson${items.length>1?' multiple':''}">
-              <strong>${escapeHtml(item.className)}</strong>
-              <span>${full} · ${code}</span>
+            html+=`<div class="lesson compact${items.length>1?' multiple':''}" title="${full}">
+              <strong class="lesson-main">${code}</strong>
+              <span class="lesson-secondary">${escapeHtml(item.className)}</span>
             </div>`;
           }
         }
