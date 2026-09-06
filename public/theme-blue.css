@@ -1,0 +1,29 @@
+/* Shared blue timetable theme: screen only. Print remains monochrome via enhancements.css */
+:root{--tkb-blue:#35528E;--tkb-blue-dark:#2B4478;--tkb-blue-light:#EFF3FA}
+
+.table-card{border-color:var(--tkb-blue)!important;background:#fff}
+.table-title{background:var(--tkb-blue)!important;color:#fff!important;border-bottom:1px solid var(--tkb-blue-dark)!important}
+.table-title h2{color:#fff!important}
+.table-title small,#homeroom,#teacherMeta,.table-actions small{color:rgba(255,255,255,.92)!important}
+.table-actions .btn-soft{background:rgba(255,255,255,.14)!important;color:#fff!important;border:1px solid rgba(255,255,255,.34)!important;box-shadow:none!important}
+.table-actions .btn-soft:hover{background:rgba(255,255,255,.24)!important}
+
+/* Header row of the timetable */
+.schedule thead th{background:var(--tkb-blue)!important;color:#fff!important;border-color:var(--tkb-blue-dark)!important}
+.schedule thead .slot{background:var(--tkb-blue)!important;color:#fff!important}
+
+/* Mobile/tablet day headers use the same visual language */
+.day-card{border-color:#9CACCA!important}
+.day-card-title{background:var(--tkb-blue)!important;color:#fff!important;border-bottom-color:var(--tkb-blue-dark)!important}
+.mobile-period-label{color:var(--tkb-blue)!important;font-weight:900!important}
+.afternoon .mobile-period-label{color:var(--tkb-blue)!important}
+
+/* Keep session labels understated so the blue header remains the main visual anchor */
+.morning .session-heading,.afternoon .session-heading{color:var(--tkb-blue)!important;border-bottom-color:#CBD5E6!important}
+
+/* Printing must remain plain black/white */
+@media print{
+  .table-card{border-color:#000!important}
+  .table-title,.schedule thead th,.schedule thead .slot,.day-card-title{background:#fff!important;color:#000!important;border-color:#000!important}
+  .table-title h2,.table-title small,#homeroom,#teacherMeta,.table-actions small{color:#000!important}
+}
