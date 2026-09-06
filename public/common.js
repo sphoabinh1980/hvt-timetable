@@ -5,6 +5,20 @@ export const SESSIONS = [
   {name:'Chiều', periods:[1,2,3,4], className:'afternoon', note:'4 tiết'}
 ];
 
+const SUBJECT_NAMES={
+  'T':'Toán','T1':'Toán','V':'Ngữ văn','TN':'Tin học','Tin':'Tin học',
+  'L':'Vật lý','LY':'Vật lý','H':'Hóa học','H1':'Hóa học','Hóa2':'Hóa học',
+  'S':'Sinh học','S1':'Sinh học','SU':'Lịch sử','Đ':'Địa lý',
+  'A':'Tiếng Anh','A1':'Tiếng Anh','P':'Tiếng Pháp','N':'Tiếng Nga','TQ':'Tiếng Trung',
+  'CN':'Công nghệ','GDTC':'Giáo dục thể chất','GDQP':'GDQP-AN','QPAN':'GDQP-AN',
+  'GDKT&PL':'Giáo dục KT&PL','KTPL':'Giáo dục KT&PL','GDĐP':'Giáo dục địa phương','GDĐP1':'Giáo dục địa phương',
+  'TrN':'Hoạt động trải nghiệm','TrNg':'Hoạt động trải nghiệm','Nâng cao':'Nâng cao','Nângcao':'Nâng cao','ÔnTN':'Ôn tốt nghiệp'
+};
+
+export function subjectName(code=''){
+  return SUBJECT_NAMES[String(code).trim()]||String(code).trim();
+}
+
 export function todayLocal(){
   const d = new Date();
   const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
@@ -65,11 +79,22 @@ function renderSession(lessons, session, mode){
       }else{
         for(const item of items){
           if(mode==='class'){
-            const sub=escapeHtml(item.subject);
+            const code=escapeHtml(item.subject);
+            const full=escapeHtml(subjectName(item.subject));
             const teacher=escapeHtml(item.teacherName||item.teacherCode||'');
-            html+=`<div class="lesson${items.length>1?' multiple':''}"><strong>${sub}</strong><span>${teacher || 'Chưa có giáo viên'}</span></div>`;
+            const raw=escapeHtml(item.raw||`${item.subject}${item.teacherCode?' - '+item.teacherCode:''}`);
+            html+=`<div class="lesson${items.length>1?' multiple':''}">
+              <div class="lesson-subject"><strong>${full}</strong><span class="subject-code">${code}</span></div>
+              <span class="lesson-teacher">GV: ${teacher || 'Chưa có giáo viên'}</span>
+              <small class="lesson-raw">${raw}</small>
+            </div>`;
           }else{
-            html+=`<div class="lesson${items.length>1?' multiple':''}"><strong>${escapeHtml(item.className)}</strong><span>${escapeHtml(item.subject)}</span></div>`;
+            const full=escapeHtml(subjectName(item.subject));
+            const code=escapeHtml(item.subject);
+            html+=`<div class="lesson${items.length>1?' multiple':''}">
+              <strong>${escapeHtml(item.className)}</strong>
+              <span>${full} · ${code}</span>
+            </div>`;
           }
         }
       }
