@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: hvt-timetable
+    runtime: docker
+    healthCheckPath: /health
+    envVars:
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATA_DIR
+        value: /app/data
+      - key: SCHOOL_NAME
+        value: HVT
+      - key: TZ
+        value: Asia/Ho_Chi_Minh
+    disk:
+      name: hvt-data
+      mountPath: /app/data
+      sizeGB: 1

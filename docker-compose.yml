@@ -1,0 +1,16 @@
+services:
+  hvt-timetable:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-this-on-the-server}
+      SESSION_SECRET: change-this-before-public-deploy
+      DATA_DIR: /app/data
+      SCHOOL_NAME: HVT
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - hvt_data:/app/data
+volumes:
+  hvt_data:
