@@ -15,8 +15,27 @@ const SUBJECT_NAMES={
   'TrN':'Hoạt động trải nghiệm','TrNg':'Hoạt động trải nghiệm','Nâng cao':'Nâng cao','Nângcao':'Nâng cao','ÔnTN':'Ôn tốt nghiệp'
 };
 
+const TEACHER_NAME_OVERRIDES={
+  'N.P.Nga':{
+    'P':'Nguyễn Phương Nga',
+    'V':'Ninh Phương Nga',
+    'TrN':'Ninh Phương Nga',
+    'TrNg':'Ninh Phương Nga'
+  },
+  'N.T.Hạnh':{
+    'V':'Nguyễn Thị Hạnh (Ngữ văn)',
+    'TQ':'Nguyễn Thị Hạnh (Tiếng Trung)'
+  }
+};
+
 export function subjectName(code=''){
   return SUBJECT_NAMES[String(code).trim()]||String(code).trim();
+}
+
+export function teacherNameForLesson(code='',subject='',fallback=''){
+  const teacherCode=String(code||'').trim();
+  const subjectCode=String(subject||'').trim();
+  return TEACHER_NAME_OVERRIDES[teacherCode]?.[subjectCode]||fallback||teacherCode;
 }
 
 export function todayLocal(){
@@ -82,10 +101,12 @@ function renderSession(lessons, session, mode){
             const code=escapeHtml(item.subject);
             const full=escapeHtml(subjectName(item.subject));
             const teacherCode=escapeHtml(item.teacherCode||'');
+            const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.teacherName||''));
             const raw=escapeHtml(item.raw||`${item.subject}${item.teacherCode?' - '+item.teacherCode:''}`);
             html+=`<div class="lesson${items.length>1?' multiple':''}">
               <div class="lesson-subject"><strong>${full}</strong><span class="subject-code">${code}</span></div>
               <span class="lesson-teacher">GV: ${teacherCode || 'Chưa có mã GV'}</span>
+              ${teacherFull&&teacherFull!==teacherCode?`<span class="lesson-teacher-name">${teacherFull}</span>`:''}
               <small class="lesson-raw">${raw}</small>
             </div>`;
           }else{
