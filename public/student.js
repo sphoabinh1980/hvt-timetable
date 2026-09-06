@@ -1,4 +1,4 @@
-import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast} from './common.js';
+import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,homeroomFullName} from './common.js';
 
 const versionSelect=document.querySelector('#versionSelect');
 const classSelect=document.querySelector('#classSelect');
@@ -50,7 +50,10 @@ async function load(){
     if(!ok||!classSelect.value) return;
     const data=await api(`/api/timetable/class?date=${encodeURIComponent(versionSelect.value)}&className=${encodeURIComponent(classSelect.value)}`);
     document.querySelector('#scheduleTitle').textContent=`Lớp ${data.className}`;
-    document.querySelector('#homeroom').textContent=data.homeroom?.code?`GVCN: ${data.homeroom.fullName||data.homeroom.code}`:'';
+    if(data.homeroom?.code){
+      const fullName=homeroomFullName(data.className,data.homeroom.code,data.homeroom.fullName||'');
+      document.querySelector('#homeroom').textContent=`GVCN: ${fullName}`;
+    }else document.querySelector('#homeroom').textContent='';
     document.querySelector('#source').textContent='';
     renderGrid(document.querySelector('#schedule'),data.lessons,'class');
     card.classList.remove('hidden');
