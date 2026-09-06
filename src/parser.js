@@ -29,6 +29,22 @@ function parseLesson(value) {
   return { raw, subject: match[1].trim(), teacherCode: match[2].trim() };
 }
 
+function normalizeTeacherCode(className, subject, teacherCode) {
+  if (!teacherCode) return teacherCode;
+  let code = String(teacherCode).trim();
+
+  // Cùng một giáo viên Nguyễn Thị Hòa đang xuất hiện hai kiểu dấu.
+  if (code === 'N.T.Hoà') code = 'N.T.Hòa';
+
+  // TKBL1(3): Vật lý 10 Nga thuộc Bùi Thị Hiền theo PCCM,
+  // nhưng 3 ô đang ghi nhầm mã của Ngô Thị Tố Hoan.
+  if (className === '10N' && ['L', 'LY'].includes(String(subject).trim()) && code === 'N.T.T.Hoan') {
+    code = 'B.T.Hiền';
+  }
+
+  return code;
+}
+
 function sessionFromSheet(sheetName, row, sessionCol) {
   const suffix = sheetName.match(/-([SC])$/i)?.[1]?.toUpperCase();
   if (suffix === 'S') return 'Sáng';
@@ -84,7 +100,17 @@ export function parseTimetableWorkbook(buffer) {
       for (const { col, className } of classCols) {
         const parsed = parseLesson(row[col]);
         if (!parsed) continue;
-        lessons.push({ grade, className, dayOfWeek: currentDay, period, session, subject: parsed.subject, teacherCode: parsed.teacherCode, rawValue: parsed.raw });
+        const teacherCode = normalizeTeacherCode(className, parsed.subject, parsed.teacherCode);
+        lessons.push({
+          grade,
+          className,
+          dayOfWeek: currentDay,
+          period,
+          session,
+          subject: parsed.subject,
+          teacherCode,
+          rawValue: parsed.raw
+        });
         count += 1;
       }
     }
@@ -122,9 +148,10 @@ export function parseTeacherRoster(buffer) {
 
   const teachers = [];
   for (let r = headerIndex + 1; r < rows.length; r += 1) {
-    const code = String(rows[r][mapping.code] ?? '').trim();
+    let code = String(rows[r][mapping.code] ?? '').trim();
     const fullName = String(rows[r][mapping.name] ?? '').trim();
     if (!code || !fullName) continue;
+    if (code === 'N.T.Hoà') code = 'N.T.Hòa';
     const subject = mapping.subject >= 0 ? String(rows[r][mapping.subject] ?? '').trim() : '';
     teachers.push({ code, fullName, subject });
   }
