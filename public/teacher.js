@@ -1,10 +1,11 @@
-import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast} from './common.js';
+import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,subjectName} from './common.js';
 
 const versionSelect=document.querySelector('#versionSelect');
 const select=document.querySelector('#teacherSelect');
 const status=document.querySelector('#status');
 const msg=document.querySelector('#message');
 const card=document.querySelector('#scheduleCard');
+const summary=document.querySelector('#teacherSummary');
 let versions=[];
 
 const SPLIT_TEACHERS={
@@ -53,6 +54,23 @@ function selectedIdentity(){
   return {value,baseCode:value,subjects:null,label:null,subjectLabel:''};
 }
 
+function renderTeacherSummary(lessons){
+  const classCounts=new Map();
+  const subjects=new Map();
+  for(const x of lessons){
+    classCounts.set(x.className,(classCounts.get(x.className)||0)+1);
+    subjects.set(x.subject,(subjects.get(x.subject)||0)+1);
+  }
+  const classes=[...classCounts.entries()].sort((a,b)=>a[0].localeCompare(b[0],'vi',{numeric:true}));
+  const subjectEntries=[...subjects.entries()].sort((a,b)=>subjectName(a[0]).localeCompare(subjectName(b[0]),'vi'));
+  summary.innerHTML=`<div class="teacher-summary-grid">
+    <div class="teacher-stat primary"><span>Tổng số tiết</span><strong>${lessons.length}</strong><small>tiết / tuần</small></div>
+    <div class="teacher-stat"><span>Số lớp dạy</span><strong>${classes.length}</strong><small>lớp trong phiên bản này</small></div>
+    <div class="teacher-detail"><span>Môn đang dạy</span><div class="teacher-chips">${subjectEntries.length?subjectEntries.map(([code,count])=>`<span class="teacher-chip subject">${escapeHtml(subjectName(code))} · ${escapeHtml(code)} · ${count} tiết</span>`).join(''):'<span class="teacher-chip">—</span>'}</div></div>
+    <div class="teacher-detail"><span>Các lớp đang dạy</span><div class="teacher-chips">${classes.length?classes.map(([name,count])=>`<span class="teacher-chip">${escapeHtml(name)} · ${count} tiết</span>`).join(''):'<span class="teacher-chip">—</span>'}</div></div>
+  </div>`;
+}
+
 async function loadOptions(keep=true){
   if(!versionSelect.value){
     status.innerHTML='';
@@ -85,17 +103,19 @@ async function load(){
     const lessons=identity.subjects?data.lessons.filter(x=>identity.subjects.includes(x.subject)):data.lessons;
     const title=identity.label||data.teacher.fullName||data.teacher.code;
     document.querySelector('#scheduleTitle').textContent=title;
-    const metaParts=[`Mã trong TKB: ${identity.baseCode}`];
+    const metaParts=[`Mã trong TKB: ${identity.baseCode}`,`Ngày áp dụng: ${formatDate(data.version.effectiveDate)}`];
     if(identity.subjectLabel) metaParts.push(identity.subjectLabel);
     else if(data.teacher.subject) metaParts.push(data.teacher.subject);
     document.querySelector('#teacherMeta').textContent=metaParts.join(' · ');
     document.querySelector('#source').textContent=`Nguồn: ${data.version.sourceFilename}`;
+    renderTeacherSummary(lessons);
     renderGrid(document.querySelector('#schedule'),lessons,'teacher');
     card.classList.remove('hidden');
   }catch(e){showToast(e.message,true)}
 }
 
 document.querySelector('#reloadBtn').onclick=load;
+document.querySelector('#printBtn').onclick=()=>window.print();
 versionSelect.onchange=()=>load().catch(e=>showToast(e.message,true));
 select.onchange=load;
 setupBrand();
