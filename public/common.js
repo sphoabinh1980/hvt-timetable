@@ -24,31 +24,24 @@ export function teacherNameForLesson(code='',subject='',className='',fallback=''
   const subjectCode=String(subject||'').trim();
   const cls=String(className||'').trim();
 
-  // 4 mã trong TKBL1(3) đại diện cho 2 giáo viên khác nhau.
   if(teacherCode==='N.P.Nga'){
     if(subjectCode==='P') return 'Nguyễn Phương Nga';
     if(['V','TrN','TrNg'].includes(subjectCode)) return 'Ninh Phương Nga';
   }
-
   if(teacherCode==='N.T.Hạnh'){
     if(subjectCode==='V') return 'Nguyễn Thị Hạnh (Ngữ văn)';
     if(subjectCode==='TQ') return 'Nguyễn Thị Hạnh (Tiếng Trung)';
   }
-
   if(teacherCode==='V.T.P.Thảo'){
     if(['H','H1','Hóa2'].includes(subjectCode)) return 'Võ Thị Phương Thảo';
     if(subjectCode==='SU') return 'Vũ Thị Phương Thảo';
   }
-
   if(teacherCode==='P.T.Nga'){
     if(['10P','12S','12SỬ','12SU'].includes(cls)) return 'Phạm Thị Nga';
     if(['10TIN','10TN','11N','11P'].includes(cls)) return 'Phạm Thanh Nga';
   }
-
-  // Cùng một người nhưng nguồn có hai cách viết Thuý/Thúy.
   if(teacherCode==='M.T.T.Ninh') return 'Mai Thị Thúy Ninh';
 
-  // Hỗ trợ một số phiên bản cũ đã import trước khi parser được sửa.
   if(teacherCode==='N.T.T.Hoan' && cls==='10N' && ['L','LY'].includes(subjectCode)) return 'Bùi Thị Hiền';
   if(teacherCode==='N.T.T.Hoan') return 'Ngô Thị Tố Hoan';
 
@@ -88,58 +81,82 @@ export function showToast(message, error=false){
   setTimeout(()=>el.remove(),4200);
 }
 
-function renderSession(lessons, session, mode){
+function lessonMarkup(item,mode,multiple=false){
+  const code=escapeHtml(item.subject);
+  const full=escapeHtml(subjectName(item.subject));
+  if(mode==='class'){
+    const teacherCode=escapeHtml(item.teacherCode||'');
+    const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.className,item.teacherName||''));
+    return `<div class="lesson compact${multiple?' multiple':''}" title="${full}${teacherFull?' · '+teacherFull:''}">
+      <strong class="lesson-main">${code}</strong>
+      <span class="lesson-secondary">${teacherCode || '—'}</span>
+    </div>`;
+  }
+  return `<div class="lesson compact${multiple?' multiple':''}" title="${full}">
+    <strong class="lesson-main">${code}</strong>
+    <span class="lesson-secondary">${escapeHtml(item.className)}</span>
+  </div>`;
+}
+
+function buildSessionIndex(lessons,session){
   const byKey=new Map();
   for(const lesson of lessons.filter(x=>x.session===session.name)){
     const key=`${lesson.day}|${lesson.period}`;
     if(!byKey.has(key)) byKey.set(key,[]);
     byKey.get(key).push(lesson);
   }
+  return byKey;
+}
 
-  let html=`<section class="session-panel ${session.className}">
-    <div class="session-heading">
-      <div><span class="session-kicker">BUỔI</span><h3>${session.name}</h3></div>
-      <span class="session-note">${session.note}</span>
-    </div>
-    <div class="schedule-wrap"><table class="schedule"><thead><tr><th class="slot">Tiết</th>`;
+function renderDesktopTable(byKey,session,mode){
+  let html='<div class="desktop-schedule"><div class="schedule-wrap"><table class="schedule"><thead><tr><th class="slot">Tiết</th>';
   for(const day of DAYS) html+=`<th>${DAY_LABEL[day]}</th>`;
   html+='</tr></thead><tbody>';
-
   for(const period of session.periods){
     html+=`<tr><td class="slot"><span class="period-pill">T${period}</span></td>`;
     for(const day of DAYS){
       const items=byKey.get(`${day}|${period}`)||[];
       html+='<td>';
-      if(!items.length){
-        html+='<div class="empty">—</div>';
-      }else{
-        for(const item of items){
-          const code=escapeHtml(item.subject);
-          const full=escapeHtml(subjectName(item.subject));
-          if(mode==='class'){
-            const teacherCode=escapeHtml(item.teacherCode||'');
-            const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.className,item.teacherName||''));
-            html+=`<div class="lesson compact${items.length>1?' multiple':''}" title="${full}${teacherFull?' · '+teacherFull:''}">
-              <strong class="lesson-main">${code}</strong>
-              <span class="lesson-secondary">${teacherCode || '—'}</span>
-            </div>`;
-          }else{
-            html+=`<div class="lesson compact${items.length>1?' multiple':''}" title="${full}">
-              <strong class="lesson-main">${code}</strong>
-              <span class="lesson-secondary">${escapeHtml(item.className)}</span>
-            </div>`;
-          }
-        }
-      }
+      if(!items.length) html+='<div class="empty">—</div>';
+      else html+=items.map(item=>lessonMarkup(item,mode,items.length>1)).join('');
       html+='</td>';
     }
     html+='</tr>';
   }
-  html+='</tbody></table></div></section>';
+  html+='</tbody></table></div></div>';
   return html;
 }
 
-export function renderGrid(container, lessons, mode='class'){
+function renderResponsiveCards(byKey,session,mode){
+  let html='<div class="mobile-schedule"><div class="day-card-grid">';
+  for(const day of DAYS){
+    html+=`<section class="day-card"><header class="day-card-title">${DAY_LABEL[day]}</header><div class="day-card-body">`;
+    for(const period of session.periods){
+      const items=byKey.get(`${day}|${period}`)||[];
+      html+=`<div class="mobile-period-row"><div class="mobile-period-label">T${period}</div><div class="mobile-period-content">`;
+      if(!items.length) html+='<div class="mobile-empty">—</div>';
+      else html+=items.map(item=>lessonMarkup(item,mode,items.length>1)).join('');
+      html+='</div></div>';
+    }
+    html+='</div></section>';
+  }
+  html+='</div></div>';
+  return html;
+}
+
+function renderSession(lessons,session,mode){
+  const byKey=buildSessionIndex(lessons,session);
+  return `<section class="session-panel ${session.className}">
+    <div class="session-heading">
+      <div><span class="session-kicker">BUỔI</span><h3>${session.name}</h3></div>
+      <span class="session-note">${session.note}</span>
+    </div>
+    ${renderDesktopTable(byKey,session,mode)}
+    ${renderResponsiveCards(byKey,session,mode)}
+  </section>`;
+}
+
+export function renderGrid(container,lessons,mode='class'){
   container.innerHTML=SESSIONS.map(session=>renderSession(lessons,session,mode)).join('');
 }
 
