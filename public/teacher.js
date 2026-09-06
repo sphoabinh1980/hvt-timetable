@@ -12,6 +12,10 @@ const SPLIT_TEACHERS={
   'N.T.Hạnh':[
     {value:'N.T.Hạnh::V',baseCode:'N.T.Hạnh',subjects:['V'],label:'Nguyễn Thị Hạnh (Ngữ văn)',subjectLabel:'Ngữ văn'},
     {value:'N.T.Hạnh::TQ',baseCode:'N.T.Hạnh',subjects:['TQ'],label:'Nguyễn Thị Hạnh (Tiếng Trung)',subjectLabel:'Tiếng Trung'}
+  ],
+  'N.P.Nga':[
+    {value:'N.P.Nga::VAN',baseCode:'N.P.Nga',subjects:['V','TrN','TrNg'],label:'Ninh Phương Nga (Ngữ văn)',subjectLabel:'Ngữ văn / HĐTN'},
+    {value:'N.P.Nga::P',baseCode:'N.P.Nga',subjects:['P'],label:'Nguyễn Phương Nga (Tiếng Pháp)',subjectLabel:'Tiếng Pháp'}
   ]
 };
 
