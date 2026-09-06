@@ -15,27 +15,40 @@ const SUBJECT_NAMES={
   'TrN':'Hoạt động trải nghiệm','TrNg':'Hoạt động trải nghiệm','Nâng cao':'Nâng cao','Nângcao':'Nâng cao','ÔnTN':'Ôn tốt nghiệp'
 };
 
-const TEACHER_NAME_OVERRIDES={
-  'N.P.Nga':{
-    'P':'Nguyễn Phương Nga',
-    'V':'Ninh Phương Nga',
-    'TrN':'Ninh Phương Nga',
-    'TrNg':'Ninh Phương Nga'
-  },
-  'N.T.Hạnh':{
-    'V':'Nguyễn Thị Hạnh (Ngữ văn)',
-    'TQ':'Nguyễn Thị Hạnh (Tiếng Trung)'
-  }
-};
-
 export function subjectName(code=''){
   return SUBJECT_NAMES[String(code).trim()]||String(code).trim();
 }
 
-export function teacherNameForLesson(code='',subject='',fallback=''){
+export function teacherNameForLesson(code='',subject='',className='',fallback=''){
   const teacherCode=String(code||'').trim();
   const subjectCode=String(subject||'').trim();
-  return TEACHER_NAME_OVERRIDES[teacherCode]?.[subjectCode]||fallback||teacherCode;
+  const cls=String(className||'').trim();
+
+  if(teacherCode==='N.P.Nga'){
+    if(subjectCode==='P') return 'Nguyễn Phương Nga';
+    if(['V','TrN','TrNg'].includes(subjectCode)) return 'Ninh Phương Nga';
+  }
+
+  if(teacherCode==='N.T.Hạnh'){
+    if(subjectCode==='V') return 'Nguyễn Thị Hạnh (Ngữ văn)';
+    if(subjectCode==='TQ') return 'Nguyễn Thị Hạnh (Tiếng Trung)';
+  }
+
+  if(teacherCode==='V.T.P.Thảo'){
+    if(['H','H1','Hóa2'].includes(subjectCode)) return 'Võ Thị Phương Thảo';
+    if(subjectCode==='SU') return 'Vũ Thị Phương Thảo';
+  }
+
+  if(teacherCode==='P.T.Nga'){
+    if(['10P','12S','12SU'].includes(cls)) return 'Phạm Thị Nga';
+    if(['10TIN','11N','11P'].includes(cls)) return 'Phạm Thanh Nga';
+  }
+
+  // Hỗ trợ phiên bản cũ đã import trước khi parser được sửa.
+  if(teacherCode==='N.T.T.Hoan' && cls==='10N' && ['L','LY'].includes(subjectCode)) return 'Bùi Thị Hiền';
+  if(teacherCode==='N.T.T.Hoan') return 'Ngô Thị Tố Hoan';
+
+  return fallback||teacherCode;
 }
 
 export function todayLocal(){
@@ -101,7 +114,7 @@ function renderSession(lessons, session, mode){
             const code=escapeHtml(item.subject);
             const full=escapeHtml(subjectName(item.subject));
             const teacherCode=escapeHtml(item.teacherCode||'');
-            const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.teacherName||''));
+            const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.className,item.teacherName||''));
             const raw=escapeHtml(item.raw||`${item.subject}${item.teacherCode?' - '+item.teacherCode:''}`);
             html+=`<div class="lesson${items.length>1?' multiple':''}">
               <div class="lesson-subject"><strong>${full}</strong><span class="subject-code">${code}</span></div>
