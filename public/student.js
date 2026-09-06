@@ -49,7 +49,10 @@ async function load(){
     if(!ok||!classSelect.value) return;
     const data=await api(`/api/timetable/class?date=${encodeURIComponent(versionSelect.value)}&className=${encodeURIComponent(classSelect.value)}`);
     document.querySelector('#scheduleTitle').textContent=`Lớp ${data.className}`;
-    document.querySelector('#homeroom').textContent=data.homeroom?.code?`GVCN: ${data.homeroom.fullName||data.homeroom.code}`:'';
+    const meta=[];
+    if(data.homeroom?.code) meta.push(`GVCN: ${data.homeroom.fullName||data.homeroom.code}`);
+    meta.push(`Ngày áp dụng: ${formatDate(data.version.effectiveDate)}`);
+    document.querySelector('#homeroom').textContent=meta.join(' · ');
     document.querySelector('#source').textContent=`Nguồn: ${data.version.sourceFilename}`;
     renderGrid(document.querySelector('#schedule'),data.lessons,'class');
     card.classList.remove('hidden');
@@ -57,6 +60,7 @@ async function load(){
 }
 
 document.querySelector('#reloadBtn').onclick=load;
+document.querySelector('#printBtn').onclick=()=>window.print();
 versionSelect.onchange=()=>load().catch(e=>showToast(e.message,true));
 classSelect.onchange=load;
 setupBrand();
