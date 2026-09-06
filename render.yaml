@@ -1,3 +1,7 @@
+databases:
+  - name: hvt-timetable-db
+    plan: free
+
 services:
   - type: web
     name: hvt-timetable
@@ -11,6 +15,12 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
+      - key: SESSION_TTL_SECONDS
+        value: "604800"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hvt-timetable-db
+          property: connectionString
       - key: DATA_DIR
         value: /app/data
       - key: SCHOOL_NAME
