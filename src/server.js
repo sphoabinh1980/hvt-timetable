@@ -121,7 +121,7 @@ app.get('/api/timetable/class', (req, res) => {
   if (!className) return res.status(400).json({ error: 'Thiếu lớp.' });
   const lessons = db.prepare(`SELECT l.*, t.full_name FROM lessons l LEFT JOIN teachers t ON t.code = l.teacher_code WHERE l.version_id = ? AND l.class_name = ? ORDER BY l.day_of_week, CASE l.session WHEN 'Sáng' THEN 0 ELSE 1 END, l.period`).all(version.id, className);
   const info = db.prepare(`SELECT ci.*, t.full_name homeroom_name FROM class_info ci LEFT JOIN teachers t ON t.code = ci.homeroom_teacher_code WHERE ci.version_id = ? AND ci.class_name = ?`).get(version.id, className) || null;
-  res.json({ date, version: versionPayload(version), className, homeroom: info ? { code: info.homeroom_teacher_code, fullName: info.homeroom_name } : null, lessons: lessons.map((x) => ({ day: x.day_of_week, period: x.period, session: x.session, subject: x.subject, teacherCode: x.teacher_code, teacherName: teacherDisplay(x), raw: x.raw_value })) });
+  res.json({ date, version: versionPayload(version), className, homeroom: info ? { code: info.homeroom_teacher_code, fullName: info.homeroom_name } : null, lessons: lessons.map((x) => ({ day: x.day_of_week, period: x.period, session: x.session, subject: x.subject, className: x.class_name, teacherCode: x.teacher_code, teacherName: teacherDisplay(x), raw: x.raw_value })) });
 });
 
 app.get('/api/timetable/teacher', (req, res) => {
@@ -172,7 +172,8 @@ app.post('/api/admin/import-teachers', adminOnly, upload.single('file'), (req, r
     const teachers = parseTeacherRoster(req.file.buffer);
     const count = importTeachers(teachers);
     res.json({ ok: true, count });
-  } catch (error) { res.status(400).json({ error: error.message || 'Không thể import danh sách giáo viên.' }); }
+  } catch (error) { res.status(400).json({ error: error.message || 'Không thể import danh sách giáo viên.' });
+  }
 });
 
 app.get('/api/admin/export-teachers', adminOnly, (_req, res) => {
