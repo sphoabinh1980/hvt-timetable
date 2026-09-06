@@ -1,7 +1,8 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thời khóa biểu lớp</title><link rel="stylesheet" href="/styles.css"></head><body>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thời khóa biểu học sinh</title><link rel="stylesheet" href="/styles.css"></head><body>
 <header class="topbar"><nav class="nav"><a class="brand" href="/"><span class="logo" data-school>HVT</span><span><span data-school>HVT</span> · Thời khóa biểu</span></a><div class="navlinks"><a class="active" href="/">TKB học sinh</a><a href="/teachers.html">TKB giáo viên</a><a href="/admin.html">Admin</a></div></nav></header>
-<main class="shell"><section class="hero"><div class="eyebrow">Tra cứu nhanh</div><h1>Thời khóa biểu học sinh</h1><p>Mặc định hiển thị thời khóa biểu gần nhất đã đến ngày áp dụng. Chọn một ngày bất kỳ để xem lại đúng phiên bản thời khóa biểu có hiệu lực tại ngày đó.</p></section>
-<section class="card controls"><div class="field"><label>Lớp</label><select id="classSelect" class="input"></select></div><div class="field"><label>Ngày cần xem</label><input id="dateInput" class="input" type="date"></div><button id="reloadBtn" class="btn btn-primary">Xem thời khóa biểu</button></section>
-<div id="status" class="statusbar"></div><div id="history" class="history"></div><div id="message"></div>
-<section id="scheduleCard" class="card table-card hidden"><div class="table-title"><div><h2 id="scheduleTitle">Thời khóa biểu</h2><small id="homeroom"></small></div><small id="source"></small></div><div id="schedule" class="scroll"></div></section>
+<main class="shell">
+<section class="hero"><div class="eyebrow">Tra cứu dành cho học sinh</div><h1>Thời khóa biểu học sinh</h1><p>Chọn lớp và <b>ngày áp dụng</b> của thời khóa biểu. Hệ thống lưu các phiên bản đã upload để bạn có thể xem lại lịch cũ bất cứ lúc nào.</p></section>
+<section class="card controls"><div class="field"><label>Lớp</label><select id="classSelect" class="input"></select></div><div class="field"><label>Ngày áp dụng</label><select id="versionSelect" class="input"></select></div><button id="reloadBtn" class="btn btn-primary">Xem thời khóa biểu</button></section>
+<div id="status" class="statusbar"></div><div id="message"></div>
+<section id="scheduleCard" class="card table-card hidden"><div class="table-title"><div><h2 id="scheduleTitle">Thời khóa biểu</h2><small id="homeroom"></small></div><small id="source"></small></div><div id="schedule"></div></section>
 </main><script type="module" src="/student.js"></script></body></html>
