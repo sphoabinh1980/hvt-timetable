@@ -81,11 +81,11 @@ function renderSession(lessons, session, mode){
           if(mode==='class'){
             const code=escapeHtml(item.subject);
             const full=escapeHtml(subjectName(item.subject));
-            const teacher=escapeHtml(item.teacherName||item.teacherCode||'');
+            const teacherCode=escapeHtml(item.teacherCode||'');
             const raw=escapeHtml(item.raw||`${item.subject}${item.teacherCode?' - '+item.teacherCode:''}`);
             html+=`<div class="lesson${items.length>1?' multiple':''}">
               <div class="lesson-subject"><strong>${full}</strong><span class="subject-code">${code}</span></div>
-              <span class="lesson-teacher">GV: ${teacher || 'Chưa có giáo viên'}</span>
+              <span class="lesson-teacher">GV: ${teacherCode || 'Chưa có mã GV'}</span>
               <small class="lesson-raw">${raw}</small>
             </div>`;
           }else{
