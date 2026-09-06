@@ -2,6 +2,7 @@ services:
   - type: web
     name: hvt-timetable
     runtime: docker
+    plan: free
     healthCheckPath: /health
     envVars:
       - key: ADMIN_USER
@@ -16,7 +17,3 @@ services:
         value: HVT
       - key: TZ
         value: Asia/Ho_Chi_Minh
-    disk:
-      name: hvt-data
-      mountPath: /app/data
-      sizeGB: 1
