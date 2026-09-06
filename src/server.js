@@ -28,16 +28,17 @@ readEnvFile();
 const PORT = Number(process.env.PORT || 3000);
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
-if (!ADMIN_PASSWORD) {
-  console.warn('ADMIN_PASSWORD is not set. Admin login is disabled until the environment variable is configured.');
-}
+if (!ADMIN_PASSWORD) console.warn('ADMIN_PASSWORD is not set. Admin login is disabled until the environment variable is configured.');
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+const SESSION_TTL_SECONDS = Number(process.env.SESSION_TTL_SECONDS || 60 * 60 * 24 * 7);
 const DATA_DIR = path.resolve(root, process.env.DATA_DIR || './data');
+const DATABASE_URL = process.env.DATABASE_URL || '';
 const SCHOOL_NAME = process.env.SCHOOL_NAME || 'HVT';
 const isProduction = process.env.NODE_ENV === 'production';
 
-const { db, importVersion, importTeachers, resolveVersion } = createDb(DATA_DIR);
-const auth = createAuth({ user: ADMIN_USER, secret: SESSION_SECRET });
+const store = await createDb({ dataDir: DATA_DIR, databaseUrl: DATABASE_URL });
+console.log(`Database backend: ${store.kind}`);
+const auth = createAuth({ user: ADMIN_USER, secret: SESSION_SECRET, ttlSeconds: SESSION_TTL_SECONDS });
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
@@ -77,9 +78,7 @@ function adminOnly(req, res, next) {
   next();
 }
 
-function validateDate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
-}
+function validateDate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')); }
 function requestedDate(req) {
   const value = String(req.query.date || '');
   if (validateDate(value)) return value;
@@ -87,24 +86,23 @@ function requestedDate(req) {
 }
 function versionPayload(version) {
   if (!version) return null;
-  return { id: version.id, name: version.name, effectiveDate: version.effective_date, sourceFilename: version.source_filename, importedAt: version.imported_at };
+  return { id: Number(version.id), name: version.name, effectiveDate: version.effective_date, sourceFilename: version.source_filename, importedAt: version.imported_at };
 }
 function teacherDisplay(row) { return row.full_name || row.teacher_code; }
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+app.get('/health', (_req, res) => res.json({ ok: true, database: store.kind }));
 app.get('/api/config', (_req, res) => res.json({ schoolName: SCHOOL_NAME }));
 
-app.get('/api/versions', (_req, res) => {
-  const rows = db.prepare(`SELECT v.*, COUNT(l.id) lesson_count FROM versions v LEFT JOIN lessons l ON l.version_id = v.id GROUP BY v.id ORDER BY v.effective_date DESC, v.id DESC`).all();
-  res.json(rows.map((x) => ({ ...versionPayload(x), lessonCount: x.lesson_count })));
+app.get('/api/versions', async (_req, res) => {
+  const rows = await store.listVersions();
+  res.json(rows.map((x) => ({ ...versionPayload(x), lessonCount: Number(x.lesson_count || 0) })));
 });
 
-app.get('/api/options', (req, res) => {
+app.get('/api/options', async (req, res) => {
   const date = requestedDate(req);
-  const version = resolveVersion(date);
+  const version = await store.resolveVersion(date);
   if (!version) return res.json({ date, version: null, classes: [], teachers: [] });
-  const classes = db.prepare(`SELECT ci.class_name, ci.grade, ci.homeroom_teacher_code, t.full_name homeroom_name FROM class_info ci LEFT JOIN teachers t ON t.code = ci.homeroom_teacher_code WHERE ci.version_id = ? ORDER BY ci.grade, ci.class_name`).all(version.id);
-  const teachers = db.prepare(`SELECT DISTINCT l.teacher_code code, t.full_name, COALESCE(t.subject, '') subject FROM lessons l LEFT JOIN teachers t ON t.code = l.teacher_code WHERE l.version_id = ? AND l.teacher_code IS NOT NULL AND l.teacher_code <> '' ORDER BY COALESCE(t.full_name, l.teacher_code), l.teacher_code`).all(version.id);
+  const { classes, teachers } = await store.getOptions(version.id);
   res.json({
     date,
     version: versionPayload(version),
@@ -113,26 +111,36 @@ app.get('/api/options', (req, res) => {
   });
 });
 
-app.get('/api/timetable/class', (req, res) => {
+app.get('/api/timetable/class', async (req, res) => {
   const date = requestedDate(req);
-  const version = resolveVersion(date);
+  const version = await store.resolveVersion(date);
   if (!version) return res.json({ date, version: null, className: req.query.className || '', lessons: [] });
   const className = String(req.query.className || '').trim();
   if (!className) return res.status(400).json({ error: 'Thiếu lớp.' });
-  const lessons = db.prepare(`SELECT l.*, t.full_name FROM lessons l LEFT JOIN teachers t ON t.code = l.teacher_code WHERE l.version_id = ? AND l.class_name = ? ORDER BY l.day_of_week, CASE l.session WHEN 'Sáng' THEN 0 ELSE 1 END, l.period`).all(version.id, className);
-  const info = db.prepare(`SELECT ci.*, t.full_name homeroom_name FROM class_info ci LEFT JOIN teachers t ON t.code = ci.homeroom_teacher_code WHERE ci.version_id = ? AND ci.class_name = ?`).get(version.id, className) || null;
-  res.json({ date, version: versionPayload(version), className, homeroom: info ? { code: info.homeroom_teacher_code, fullName: info.homeroom_name } : null, lessons: lessons.map((x) => ({ day: x.day_of_week, period: x.period, session: x.session, subject: x.subject, className: x.class_name, teacherCode: x.teacher_code, teacherName: teacherDisplay(x), raw: x.raw_value })) });
+  const { lessons, info } = await store.getClassTimetable(version.id, className);
+  res.json({
+    date,
+    version: versionPayload(version),
+    className,
+    homeroom: info ? { code: info.homeroom_teacher_code, fullName: info.homeroom_name } : null,
+    lessons: lessons.map((x) => ({ day: x.day_of_week, period: x.period, session: x.session, subject: x.subject, className: x.class_name, teacherCode: x.teacher_code, teacherName: teacherDisplay(x), raw: x.raw_value }))
+  });
 });
 
-app.get('/api/timetable/teacher', (req, res) => {
+app.get('/api/timetable/teacher', async (req, res) => {
   const date = requestedDate(req);
-  const version = resolveVersion(date);
+  const version = await store.resolveVersion(date);
   if (!version) return res.json({ date, version: null, teacherCode: req.query.teacherCode || '', lessons: [] });
   const teacherCode = String(req.query.teacherCode || '').trim();
   if (!teacherCode) return res.status(400).json({ error: 'Thiếu giáo viên.' });
-  const teacher = db.prepare(`SELECT * FROM teachers WHERE code = ?`).get(teacherCode) || { code: teacherCode, full_name: null, subject: null };
-  const lessons = db.prepare(`SELECT * FROM lessons WHERE version_id = ? AND teacher_code = ? ORDER BY day_of_week, CASE session WHEN 'Sáng' THEN 0 ELSE 1 END, period, class_name`).all(version.id, teacherCode);
-  res.json({ date, version: versionPayload(version), teacher: { code: teacher.code, fullName: teacher.full_name, subject: teacher.subject, displayName: teacher.full_name || teacher.code }, lessons: lessons.map((x) => ({ day: x.day_of_week, period: x.period, session: x.session, subject: x.subject, className: x.class_name, raw: x.raw_value })) });
+  const [teacherRow, lessons] = await Promise.all([store.getTeacher(teacherCode), store.getTeacherLessons(version.id, teacherCode)]);
+  const teacher = teacherRow || { code: teacherCode, full_name: null, subject: null };
+  res.json({
+    date,
+    version: versionPayload(version),
+    teacher: { code: teacher.code, fullName: teacher.full_name, subject: teacher.subject, displayName: teacher.full_name || teacher.code },
+    lessons: lessons.map((x) => ({ day: x.day_of_week, period: x.period, session: x.session, subject: x.subject, className: x.class_name, raw: x.raw_value }))
+  });
 });
 
 app.post('/api/admin/login', (req, res) => {
@@ -146,14 +154,14 @@ app.post('/api/admin/login', (req, res) => {
   if (!okUser || !okPassword) { recordFailure(ip); return res.status(401).json({ error: 'Sai tài khoản hoặc mật khẩu.' }); }
   attempts.delete(ip);
   const token = auth.issue(ADMIN_USER);
-  res.setHeader('Set-Cookie', `hvt_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800${isProduction ? '; Secure' : ''}`);
+  res.setHeader('Set-Cookie', `hvt_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_SECONDS}${isProduction ? '; Secure' : ''}`);
   res.json({ ok: true, username: ADMIN_USER });
 });
 
 app.post('/api/admin/logout', (_req, res) => { res.setHeader('Set-Cookie', 'hvt_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'); res.json({ ok: true }); });
 app.get('/api/admin/me', adminOnly, (req, res) => res.json({ ok: true, username: req.admin }));
 
-app.post('/api/admin/upload-timetable', adminOnly, upload.single('file'), (req, res) => {
+app.post('/api/admin/upload-timetable', adminOnly, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Bạn chưa chọn file Excel.' });
     const effectiveDate = String(req.body.effectiveDate || '');
@@ -161,23 +169,28 @@ app.post('/api/admin/upload-timetable', adminOnly, upload.single('file'), (req, 
     const parsed = parseTimetableWorkbook(req.file.buffer);
     const hash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
     const name = String(req.body.name || '').trim() || `TKB áp dụng ${effectiveDate}`;
-    const versionId = importVersion({ name, effectiveDate, filename: req.file.originalname, fileHash: hash, importedBy: req.admin, parsed });
+    const versionId = await store.importVersion({ name, effectiveDate, filename: req.file.originalname, fileHash: hash, importedBy: req.admin, parsed });
     res.json({ ok: true, versionId, lessonCount: parsed.lessons.length, classCount: parsed.classInfo.length, sheets: parsed.parsedSheets });
-  } catch (error) { res.status(400).json({ error: error.message || 'Không thể đọc file Excel.' }); }
-});
-
-app.post('/api/admin/import-teachers', adminOnly, upload.single('file'), (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'Bạn chưa chọn file danh sách giáo viên.' });
-    const teachers = parseTeacherRoster(req.file.buffer);
-    const count = importTeachers(teachers);
-    res.json({ ok: true, count });
-  } catch (error) { res.status(400).json({ error: error.message || 'Không thể import danh sách giáo viên.' });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: error.message || 'Không thể đọc file Excel.' });
   }
 });
 
-app.get('/api/admin/export-teachers', adminOnly, (_req, res) => {
-  const teachers = db.prepare(`SELECT * FROM teachers ORDER BY COALESCE(full_name, code), code`).all();
+app.post('/api/admin/import-teachers', adminOnly, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Bạn chưa chọn file danh sách giáo viên.' });
+    const teachers = parseTeacherRoster(req.file.buffer);
+    const count = await store.importTeachers(teachers);
+    res.json({ ok: true, count });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: error.message || 'Không thể import danh sách giáo viên.' });
+  }
+});
+
+app.get('/api/admin/export-teachers', adminOnly, async (_req, res) => {
+  const teachers = await store.listTeachers();
   const buffer = buildTeacherWorkbook(teachers);
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', 'attachment; filename="Danh_sach_giao_vien.xlsx"');
@@ -191,22 +204,22 @@ app.get('/api/admin/teacher-template', adminOnly, (_req, res) => {
   res.send(buffer);
 });
 
-app.get('/api/admin/export-teacher-timetables', adminOnly, (req, res) => {
+app.get('/api/admin/export-teacher-timetables', adminOnly, async (req, res) => {
   const date = requestedDate(req);
-  const version = resolveVersion(date);
+  const version = await store.resolveVersion(date);
   if (!version) return res.status(404).json({ error: 'Không có TKB phù hợp ngày đã chọn.' });
-  const rows = db.prepare(`SELECT l.*, t.full_name FROM lessons l LEFT JOIN teachers t ON t.code = l.teacher_code WHERE l.version_id = ? AND l.teacher_code IS NOT NULL AND l.teacher_code <> '' ORDER BY COALESCE(t.full_name, l.teacher_code), l.teacher_code, l.day_of_week, CASE l.session WHEN 'Sáng' THEN 0 ELSE 1 END, l.period`).all(version.id);
+  const rows = await store.getTeacherTimetableRows(version.id);
   const buffer = buildTeacherTimetableWorkbook(rows, version.effective_date);
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="TKB_giao_vien_${version.effective_date}.xlsx"`);
   res.send(buffer);
 });
 
-app.delete('/api/admin/versions/:id', adminOnly, (req, res) => {
+app.delete('/api/admin/versions/:id', adminOnly, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'ID không hợp lệ.' });
-  const info = db.prepare('DELETE FROM versions WHERE id = ?').run(id);
-  res.json({ ok: true, deleted: info.changes });
+  const deleted = await store.deleteVersion(id);
+  res.json({ ok: true, deleted });
 });
 
 app.use((error, _req, res, _next) => {
@@ -215,4 +228,14 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ error: 'Lỗi máy chủ.' });
 });
 
-app.listen(PORT, '0.0.0.0', () => { console.log(`HVT Timetable running at http://localhost:${PORT}`); });
+const server = app.listen(PORT, '0.0.0.0', () => { console.log(`HVT Timetable running at http://localhost:${PORT}`); });
+
+async function shutdown(signal) {
+  console.log(`${signal}: closing server...`);
+  server.close(async () => {
+    try { await store.close(); } finally { process.exit(0); }
+  });
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
