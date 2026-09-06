@@ -8,14 +8,24 @@ const card=document.querySelector('#scheduleCard');
 const summary=document.querySelector('#teacherSummary');
 let versions=[];
 
+// Các mã bị trùng giữa nhiều giáo viên trong TKBL1(3).
+// Không đổi mã gốc trong Excel; app tách danh tính bằng môn/lớp.
 const SPLIT_TEACHERS={
   'N.T.Hạnh':[
-    {value:'N.T.Hạnh::V',baseCode:'N.T.Hạnh',subjects:['V'],label:'Nguyễn Thị Hạnh (Ngữ văn)',subjectLabel:'Ngữ văn'},
-    {value:'N.T.Hạnh::TQ',baseCode:'N.T.Hạnh',subjects:['TQ'],label:'Nguyễn Thị Hạnh (Tiếng Trung)',subjectLabel:'Tiếng Trung'}
+    {value:'N.T.Hạnh::V',baseCode:'N.T.Hạnh',subjects:['V'],classes:['12V'],label:'Nguyễn Thị Hạnh (Ngữ văn)',subjectLabel:'Ngữ văn'},
+    {value:'N.T.Hạnh::TQ',baseCode:'N.T.Hạnh',subjects:['TQ'],classes:['11TQ'],label:'Nguyễn Thị Hạnh (Tiếng Trung)',subjectLabel:'Tiếng Trung'}
   ],
   'N.P.Nga':[
-    {value:'N.P.Nga::VAN',baseCode:'N.P.Nga',subjects:['V','TrN','TrNg'],label:'Ninh Phương Nga (Ngữ văn)',subjectLabel:'Ngữ văn / HĐTN'},
-    {value:'N.P.Nga::P',baseCode:'N.P.Nga',subjects:['P'],label:'Nguyễn Phương Nga (Tiếng Pháp)',subjectLabel:'Tiếng Pháp'}
+    {value:'N.P.Nga::NINH',baseCode:'N.P.Nga',subjects:['V','TrN','TrNg'],classes:['10A1','12N','12V'],label:'Ninh Phương Nga (Ngữ văn)',subjectLabel:'Ngữ văn / HĐTN'},
+    {value:'N.P.Nga::NGUYEN',baseCode:'N.P.Nga',subjects:['P'],classes:['11P'],label:'Nguyễn Phương Nga (Tiếng Pháp)',subjectLabel:'Tiếng Pháp'}
+  ],
+  'V.T.P.Thảo':[
+    {value:'V.T.P.Thảo::VO',baseCode:'V.T.P.Thảo',subjects:['H','H1','Hóa2'],classes:['10H','11S','12T'],label:'Võ Thị Phương Thảo (Hóa học)',subjectLabel:'Hóa học'},
+    {value:'V.T.P.Thảo::VU',baseCode:'V.T.P.Thảo',subjects:['SU'],classes:['11SU','12Đ'],label:'Vũ Thị Phương Thảo (Lịch sử)',subjectLabel:'Lịch sử'}
+  ],
+  'P.T.Nga':[
+    {value:'P.T.Nga::PHAM_THI',baseCode:'P.T.Nga',subjects:['V','TrN','TrNg'],classes:['10P','12S','12SU'],label:'Phạm Thị Nga (Ngữ văn)',subjectLabel:'Ngữ văn / HĐTN'},
+    {value:'P.T.Nga::PHAM_THANH',baseCode:'P.T.Nga',subjects:['V','TrN','TrNg'],classes:['10TIN','11N','11P'],label:'Phạm Thanh Nga (Ngữ văn)',subjectLabel:'Ngữ văn / HĐTN'}
   ]
 };
 
@@ -43,7 +53,7 @@ function teacherOptions(teachers){
       }
     }else{
       const display=teacher.fullName?`${teacher.fullName} · ${teacher.code}`:teacher.code;
-      out.push({value:teacher.code,baseCode:teacher.code,subjects:null,label:teacher.fullName||teacher.code,subjectLabel:teacher.subject||'',displayName:display});
+      out.push({value:teacher.code,baseCode:teacher.code,subjects:null,classes:null,label:teacher.fullName||teacher.code,subjectLabel:teacher.subject||'',displayName:display});
     }
   }
   return out;
@@ -55,7 +65,13 @@ function selectedIdentity(){
     const found=splits.find(x=>x.value===value);
     if(found) return found;
   }
-  return {value,baseCode:value,subjects:null,label:null,subjectLabel:''};
+  return {value,baseCode:value,subjects:null,classes:null,label:null,subjectLabel:''};
+}
+
+function matchesIdentity(lesson,identity){
+  if(identity.subjects && !identity.subjects.includes(lesson.subject)) return false;
+  if(identity.classes && !identity.classes.includes(lesson.className)) return false;
+  return true;
 }
 
 function renderTeacherSummary(lessons){
@@ -104,7 +120,7 @@ async function load(){
     if(!ok||!select.value) return;
     const identity=selectedIdentity();
     const data=await api(`/api/timetable/teacher?date=${encodeURIComponent(versionSelect.value)}&teacherCode=${encodeURIComponent(identity.baseCode)}`);
-    const lessons=identity.subjects?data.lessons.filter(x=>identity.subjects.includes(x.subject)):data.lessons;
+    const lessons=data.lessons.filter(x=>matchesIdentity(x,identity));
     const title=identity.label||data.teacher.fullName||data.teacher.code;
     document.querySelector('#scheduleTitle').textContent=title;
     const metaParts=[`Mã trong TKB: ${identity.baseCode}`,`Ngày áp dụng: ${formatDate(data.version.effectiveDate)}`];
