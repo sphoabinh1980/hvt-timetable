@@ -1,4 +1,4 @@
-import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,subjectName} from './common.js';
+import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,subjectName,teacherFullName} from './common.js';
 
 const versionSelect=document.querySelector('#versionSelect');
 const select=document.querySelector('#teacherSelect');
@@ -56,7 +56,7 @@ function teacherOptions(teachers){
     if(splits){
       for(const split of splits) out.push({...split});
     }else{
-      const normalizedName=NAME_OVERRIDES[teacher.code]||teacher.fullName||teacher.code;
+      const normalizedName=NAME_OVERRIDES[teacher.code]||teacher.fullName||teacherFullName(teacher.code,'','',teacher.code);
       out.push({
         value:teacher.code,
         baseCode:teacher.code,
@@ -79,22 +79,26 @@ function teacherOptions(teachers){
 
 function selectedIdentity(){
   const value=select.value;
-  return currentOptions.find(x=>x.value===value)||{value,baseCode:value,subjects:null,classes:null,subjectCode:'',label:NAME_OVERRIDES[value]||null,subjectLabel:''};
+  return currentOptions.find(x=>x.value===value)||{value,baseCode:value,subjects:null,classes:null,subjectCode:'',label:NAME_OVERRIDES[value]||teacherFullName(value,'','',value),subjectLabel:''};
 }
 
 function pickerTop(option){
-  return `${option.subjectCode||'?'} - ${option.baseCode}`;
+  return `${option.subjectCode||'?'}-${option.baseCode}`;
+}
+
+function pickerLine(option){
+  return `${pickerTop(option)} — ${option.label||option.baseCode}`;
 }
 
 function updatePickerButton(){
   const option=currentOptions.find(x=>x.value===select.value);
   if(!option){pickerCode.textContent='Chọn giáo viên';pickerName.textContent='';return;}
-  pickerCode.textContent=pickerTop(option);
-  pickerName.textContent=option.label||option.baseCode;
+  pickerCode.textContent=pickerLine(option);
+  pickerName.textContent='';
 }
 
 function renderPicker(){
-  pickerMenu.innerHTML=currentOptions.map(x=>`<button type="button" class="teacher-picker-option${x.value===select.value?' selected':''}" data-value="${escapeHtml(x.value)}" role="option"><strong>${escapeHtml(pickerTop(x))}</strong><small>${escapeHtml(x.label||x.baseCode)}</small></button>`).join('');
+  pickerMenu.innerHTML=currentOptions.map(x=>`<button type="button" class="teacher-picker-option${x.value===select.value?' selected':''}" data-value="${escapeHtml(x.value)}" role="option"><strong>${escapeHtml(pickerLine(x))}</strong></button>`).join('');
   pickerMenu.querySelectorAll('.teacher-picker-option').forEach(btn=>{
     btn.onclick=()=>{
       select.value=btn.dataset.value;
@@ -151,7 +155,7 @@ async function loadOptions(keep=true){
   const old=keep?select.value:'';
   const data=await api(`/api/options?date=${encodeURIComponent(versionSelect.value)}`);
   currentOptions=teacherOptions(data.teachers);
-  select.innerHTML=currentOptions.map(x=>`<option value="${escapeHtml(x.value)}">${escapeHtml(pickerTop(x))}</option>`).join('');
+  select.innerHTML=currentOptions.map(x=>`<option value="${escapeHtml(x.value)}">${escapeHtml(pickerLine(x))}</option>`).join('');
   if(old&&currentOptions.some(x=>x.value===old)) select.value=old;
   renderPicker();
   if(!data.version){
@@ -171,9 +175,9 @@ async function load(){
     const identity=selectedIdentity();
     const data=await api(`/api/timetable/teacher?date=${encodeURIComponent(versionSelect.value)}&teacherCode=${encodeURIComponent(identity.baseCode)}`);
     const lessons=data.lessons.filter(x=>matchesIdentity(x,identity));
-    const title=identity.label||NAME_OVERRIDES[data.teacher.code]||data.teacher.fullName||data.teacher.code;
-    document.querySelector('#scheduleTitle').textContent=title;
-    document.querySelector('#teacherMeta').textContent=pickerTop(identity);
+    const title=identity.label||NAME_OVERRIDES[data.teacher.code]||data.teacher.fullName||teacherFullName(data.teacher.code,'','',data.teacher.code);
+    document.querySelector('#scheduleTitle').textContent=pickerTop(identity);
+    document.querySelector('#teacherMeta').textContent=title;
     document.querySelector('#source').textContent='';
     renderTeacherSummary(lessons);
     renderGrid(document.querySelector('#schedule'),lessons,'teacher');
