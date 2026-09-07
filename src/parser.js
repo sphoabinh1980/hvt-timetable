@@ -32,16 +32,7 @@ function parseLesson(value) {
 function normalizeTeacherCode(className, subject, teacherCode) {
   if (!teacherCode) return teacherCode;
   let code = String(teacherCode).trim();
-
-  // Cùng một giáo viên Nguyễn Thị Hòa đang xuất hiện hai kiểu dấu.
   if (code === 'N.T.Hoà') code = 'N.T.Hòa';
-
-  // TKBL1(3): Vật lý 10 Nga thuộc Bùi Thị Hiền theo PCCM,
-  // nhưng 3 ô đang ghi nhầm mã của Ngô Thị Tố Hoan.
-  if (className === '10N' && ['L', 'LY'].includes(String(subject).trim()) && code === 'N.T.T.Hoan') {
-    code = 'B.T.Hiền';
-  }
-
   return code;
 }
 
