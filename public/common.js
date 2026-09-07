@@ -61,7 +61,6 @@ export function teacherFullName(code='',subject='',className='',fallback=''){
     if(['10TIN','10TN','11N','11P'].includes(cls)) return 'Phạm Thanh Nga';
   }
   if(teacherCode==='M.T.T.Ninh') return 'Mai Thị Thúy Ninh';
-  if(teacherCode==='N.T.T.Hoan' && cls==='10N' && ['L','LY'].includes(subjectCode)) return 'Bùi Thị Hiền';
   return TEACHER_NAMES[teacherCode]||fallback||teacherCode;
 }
 
