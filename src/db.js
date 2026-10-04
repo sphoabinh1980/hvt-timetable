@@ -5,6 +5,10 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
+function inferredTeacherSubject(code,subject){
+  return code==='N.T.Hòa'?'Đ':subject;
+}
+
 function sqliteStore(dataDir) {
   fs.mkdirSync(dataDir, { recursive: true });
   const db = new Database(path.join(dataDir, 'hvt-timetable.db'));
@@ -19,14 +23,15 @@ function sqliteStore(dataDir) {
     CREATE TABLE IF NOT EXISTS class_info (version_id INTEGER NOT NULL REFERENCES versions(id) ON DELETE CASCADE,grade INTEGER NOT NULL,class_name TEXT NOT NULL,homeroom_teacher_code TEXT,PRIMARY KEY(version_id,class_name));
     CREATE TABLE IF NOT EXISTS teachers (code TEXT PRIMARY KEY,full_name TEXT,subject TEXT,active INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL DEFAULT (datetime('now')));
   `);
+  db.prepare(`UPDATE teachers SET subject='Đ',updated_at=datetime('now') WHERE code='N.T.Hòa' AND (subject IS NULL OR subject='' OR subject IN ('TrN','TrNg','Chủ nhiệm'))`).run();
 
   const insertVersion=db.prepare(`INSERT INTO versions(name,effective_date,source_filename,file_hash,imported_by) VALUES(?,?,?,?,?)`);
   const insertLesson=db.prepare(`INSERT INTO lessons(version_id,grade,class_name,day_of_week,period,session,subject,teacher_code,raw_value) VALUES(?,?,?,?,?,?,?,?,?)`);
   const insertClass=db.prepare(`INSERT OR REPLACE INTO class_info(version_id,grade,class_name,homeroom_teacher_code) VALUES(?,?,?,?)`);
-  const touchTeacher=db.prepare(`INSERT INTO teachers(code,full_name,subject,active) VALUES(?,NULL,?,1) ON CONFLICT(code) DO UPDATE SET subject=CASE WHEN teachers.subject IS NULL OR teachers.subject='' THEN excluded.subject ELSE teachers.subject END,updated_at=datetime('now')`);
+  const touchTeacher=db.prepare(`INSERT INTO teachers(code,full_name,subject,active) VALUES(?,NULL,?,1) ON CONFLICT(code) DO UPDATE SET subject=CASE WHEN teachers.subject IS NULL OR teachers.subject='' OR (teachers.code='N.T.Hòa' AND teachers.subject IN ('TrN','TrNg','Chủ nhiệm')) THEN excluded.subject ELSE teachers.subject END,updated_at=datetime('now')`);
   const importVersionTx=db.transaction(({name,effectiveDate,filename,fileHash,importedBy,parsed})=>{
     const versionId=Number(insertVersion.run(name,effectiveDate,filename,fileHash,importedBy).lastInsertRowid);
-    for(const x of parsed.lessons){insertLesson.run(versionId,x.grade,x.className,x.dayOfWeek,x.period,x.session,x.subject,x.teacherCode,x.rawValue);if(x.teacherCode)touchTeacher.run(x.teacherCode,x.subject);}
+    for(const x of parsed.lessons){insertLesson.run(versionId,x.grade,x.className,x.dayOfWeek,x.period,x.session,x.subject,x.teacherCode,x.rawValue);if(x.teacherCode)touchTeacher.run(x.teacherCode,inferredTeacherSubject(x.teacherCode,x.subject));}
     for(const x of parsed.classInfo){insertClass.run(versionId,x.grade,x.className,x.homeroomTeacherCode);if(x.homeroomTeacherCode)touchTeacher.run(x.homeroomTeacherCode,'Chủ nhiệm');}
     return versionId;
   });
@@ -62,6 +67,7 @@ async function postgresStore(databaseUrl){
     CREATE TABLE IF NOT EXISTS class_info (version_id BIGINT NOT NULL REFERENCES versions(id) ON DELETE CASCADE,grade INTEGER NOT NULL,class_name TEXT NOT NULL,homeroom_teacher_code TEXT,PRIMARY KEY(version_id,class_name));
     CREATE TABLE IF NOT EXISTS teachers (code TEXT PRIMARY KEY,full_name TEXT,subject TEXT,active INTEGER NOT NULL DEFAULT 1,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
   `);
+  await pool.query(`UPDATE teachers SET subject='Đ',updated_at=NOW() WHERE code='N.T.Hòa' AND (subject IS NULL OR subject='' OR subject IN ('TrN','TrNg','Chủ nhiệm'))`);
   const norm=row=>row?{...row,effective_date:row.effective_date instanceof Date?row.effective_date.toISOString().slice(0,10):String(row.effective_date).slice(0,10)}:null;
   return {
     kind:'postgres',
@@ -74,7 +80,7 @@ async function postgresStore(databaseUrl){
         const versionId=Number(r.rows[0].id);
         for(const x of parsed.lessons){
           await c.query(`INSERT INTO lessons(version_id,grade,class_name,day_of_week,period,session,subject,teacher_code,raw_value) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,[versionId,x.grade,x.className,x.dayOfWeek,x.period,x.session,x.subject,x.teacherCode,x.rawValue]);
-          if(x.teacherCode)await c.query(`INSERT INTO teachers(code,full_name,subject,active) VALUES($1,NULL,$2,1) ON CONFLICT(code) DO UPDATE SET subject=CASE WHEN teachers.subject IS NULL OR teachers.subject='' THEN EXCLUDED.subject ELSE teachers.subject END,updated_at=NOW()`,[x.teacherCode,x.subject]);
+          if(x.teacherCode)await c.query(`INSERT INTO teachers(code,full_name,subject,active) VALUES($1,NULL,$2,1) ON CONFLICT(code) DO UPDATE SET subject=CASE WHEN teachers.subject IS NULL OR teachers.subject='' OR (teachers.code='N.T.Hòa' AND teachers.subject IN ('TrN','TrNg','Chủ nhiệm')) THEN EXCLUDED.subject ELSE teachers.subject END,updated_at=NOW()`,[x.teacherCode,inferredTeacherSubject(x.teacherCode,x.subject)]);
         }
         for(const x of parsed.classInfo){
           await c.query(`INSERT INTO class_info(version_id,grade,class_name,homeroom_teacher_code) VALUES($1,$2,$3,$4) ON CONFLICT(version_id,class_name) DO UPDATE SET grade=EXCLUDED.grade,homeroom_teacher_code=EXCLUDED.homeroom_teacher_code`,[versionId,x.grade,x.className,x.homeroomTeacherCode]);
