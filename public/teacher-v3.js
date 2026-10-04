@@ -1,4 +1,4 @@
-import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,subjectName} from './common.js?v=20261004d';
+import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,subjectName} from './common.js?v=20261004f';
 import {printSchedule} from './print.js';
 
 const versionSelect=document.querySelector('#versionSelect');
