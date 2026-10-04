@@ -174,15 +174,108 @@ function renderSession(lessons,session,mode){
   return `<section class="session-panel ${session.className}">
     <div class="session-heading">
       <div><span class="session-kicker">BUỔI</span><h3>${session.name}</h3></div>
-      <span class="session-note">${session.note}</span>
+      <div class="session-heading-tools">
+        <span class="session-note">${session.note}</span>
+        <div class="mobile-view-switch no-print" role="group" aria-label="Chế độ xem thời khóa biểu">
+          <button type="button" class="mobile-view-btn active" data-schedule-view="overview">Toàn cục</button>
+          <button type="button" class="mobile-view-btn" data-schedule-view="detail">Chi tiết</button>
+        </div>
+      </div>
     </div>
     ${renderDesktopTable(byKey,session,mode)}
     ${renderResponsiveCards(byKey,session,mode)}
   </section>`;
 }
 
+let mobileScheduleResizeBound=false;
+let mobileScheduleResizeFrame=0;
+
+function resetMobileSchedule(tableBlock){
+  const wrap=tableBlock?.querySelector('.schedule-wrap');
+  const table=tableBlock?.querySelector('.schedule');
+  if(!wrap||!table)return;
+  table.style.transform='';
+  table.style.transformOrigin='';
+  wrap.style.height='';
+  wrap.scrollLeft=0;
+}
+
+function fitMobileSchedule(tableBlock){
+  if(!tableBlock)return;
+  const wrap=tableBlock.querySelector('.schedule-wrap');
+  const table=tableBlock.querySelector('.schedule');
+  if(!wrap||!table)return;
+
+  resetMobileSchedule(tableBlock);
+
+  if(!window.matchMedia('(max-width:999px)').matches)return;
+  if(tableBlock.dataset.mobileView==='detail')return;
+
+  const available=wrap.clientWidth;
+  if(!available)return;
+
+  const natural=Math.max(table.scrollWidth,table.offsetWidth);
+  if(!natural)return;
+
+  const scale=Math.min(1,available/natural);
+  table.style.transformOrigin='top left';
+  table.style.transform=`scale(${scale})`;
+  wrap.style.height=`${Math.ceil(table.offsetHeight*scale)}px`;
+  wrap.scrollLeft=0;
+}
+
+function fitAllMobileSchedules(root=document){
+  root.querySelectorAll('.desktop-schedule').forEach(block=>{
+    if(!block.dataset.mobileView)block.dataset.mobileView='overview';
+    fitMobileSchedule(block);
+  });
+}
+
+function setMobileScheduleView(panel,view){
+  const block=panel?.querySelector('.desktop-schedule');
+  if(!block)return;
+  block.dataset.mobileView=view;
+  panel.querySelectorAll('.mobile-view-btn').forEach(btn=>{
+    const active=btn.dataset.scheduleView===view;
+    btn.classList.toggle('active',active);
+    btn.setAttribute('aria-pressed',String(active));
+  });
+  if(view==='overview'){
+    requestAnimationFrame(()=>fitMobileSchedule(block));
+  }else{
+    resetMobileSchedule(block);
+  }
+}
+
+function bindMobileScheduleControls(container){
+  if(!container.dataset.mobileScheduleBound){
+    container.addEventListener('click',e=>{
+      const btn=e.target.closest('.mobile-view-btn');
+      if(!btn||!container.contains(btn))return;
+      const panel=btn.closest('.session-panel');
+      setMobileScheduleView(panel,btn.dataset.scheduleView||'overview');
+    });
+    container.dataset.mobileScheduleBound='1';
+  }
+
+  if(!mobileScheduleResizeBound){
+    const refit=()=>{
+      cancelAnimationFrame(mobileScheduleResizeFrame);
+      mobileScheduleResizeFrame=requestAnimationFrame(()=>fitAllMobileSchedules(document));
+    };
+    window.addEventListener('resize',refit,{passive:true});
+    window.addEventListener('orientationchange',refit,{passive:true});
+    mobileScheduleResizeBound=true;
+  }
+
+  container.querySelectorAll('.session-panel').forEach(panel=>setMobileScheduleView(panel,'overview'));
+  requestAnimationFrame(()=>fitAllMobileSchedules(container));
+  setTimeout(()=>fitAllMobileSchedules(container),80);
+}
+
 export function renderGrid(container,lessons,mode='class'){
   container.innerHTML=SESSIONS.map(session=>renderSession(lessons,session,mode)).join('');
+  bindMobileScheduleControls(container);
 }
 
 export async function setupBrand(){
