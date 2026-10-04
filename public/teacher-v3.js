@@ -8,6 +8,8 @@ const pickerButton=document.querySelector('#teacherPickerButton');
 const pickerMenu=document.querySelector('#teacherPickerMenu');
 const pickerCode=document.querySelector('#teacherPickerCode');
 const pickerName=document.querySelector('#teacherPickerName');
+const searchInput=document.querySelector('#teacherSearch');
+const searchClear=document.querySelector('#teacherSearchClear');
 const status=document.querySelector('#status');
 const msg=document.querySelector('#message');
 const card=document.querySelector('#scheduleCard');
@@ -90,6 +92,67 @@ function teacherOptions(teachers){
 
 function rowText(x){return `${x.displayCode} — ${x.fullName}`;}
 
+function normalizeSearch(v=''){
+  return String(v||'')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .replace(/[đĐ]/g,'d')
+    .toLowerCase()
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function subjectAliases(code=''){
+  const target=normalizeSearch(code);
+  return Object.entries(SUBJECT_NAME_TO_CODE)
+    .filter(([,value])=>normalizeSearch(value)===target)
+    .map(([name])=>name);
+}
+
+function optionSearchFields(x){
+  const code=x.subjectCode||'';
+  return [
+    x.baseCode,
+    x.displayCode,
+    x.fullName,
+    code,
+    subjectName(code),
+    ...subjectAliases(code)
+  ].filter(Boolean).map(normalizeSearch);
+}
+
+function searchRank(x,query){
+  const q=normalizeSearch(query);
+  if(!q)return 0;
+  const fields=optionSearchFields(x);
+  const exactCodes=[x.baseCode,x.displayCode,x.subjectCode].filter(Boolean).map(normalizeSearch);
+  if(exactCodes.includes(q))return 0;
+  if(fields.includes(q))return 1;
+  const tokens=q.split(' ').filter(Boolean);
+  if(tokens.every(token=>fields.some(field=>field.includes(token))))return 2;
+  return -1;
+}
+
+function filteredOptions(){
+  const query=searchInput?.value||'';
+  return currentOptions
+    .map((item,index)=>({item,index,rank:searchRank(item,query)}))
+    .filter(x=>x.rank>=0)
+    .sort((a,b)=>a.rank-b.rank||a.index-b.index)
+    .map(x=>x.item);
+}
+
+function renderPickerMenu(options=filteredOptions()){
+  if(!options.length){
+    pickerMenu.innerHTML='<div class="teacher-picker-empty">Không tìm thấy giáo viên hoặc môn phù hợp.</div>';
+    return;
+  }
+  pickerMenu.innerHTML=options.map(x=>{
+    const subject=x.subjectCode?subjectName(x.subjectCode):'';
+    return `<button type="button" class="teacher-picker-option single-line${x.value===select.value?' selected':''}" role="option" data-value="${escapeHtml(x.value)}"><strong>${escapeHtml(rowText(x))}</strong>${subject?`<small>${escapeHtml(x.subjectCode)} · ${escapeHtml(subject)}</small>`:''}</button>`;
+  }).join('');
+}
+
 function updatePickerButton(){
   const item=currentOptions.find(x=>x.value===select.value);
   if(!item){pickerCode.textContent='Chọn giáo viên';pickerName.textContent='';return;}
@@ -103,15 +166,72 @@ function renderPicker(options,preferred=''){
   select.innerHTML=options.map(x=>`<option value="${escapeHtml(x.value)}">${escapeHtml(rowText(x))}</option>`).join('');
   if(preferred&&options.some(x=>x.value===preferred)) select.value=preferred;
   else if(options.length) select.value=options[0].value;
-  pickerMenu.innerHTML=options.map(x=>`<button type="button" class="teacher-picker-option single-line${x.value===select.value?' selected':''}" role="option" data-value="${escapeHtml(x.value)}"><strong>${escapeHtml(rowText(x))}</strong></button>`).join('');
+  renderPickerMenu();
   updatePickerButton();
 }
 
-function closePicker(){pickerMenu.classList.add('hidden');pickerButton.setAttribute('aria-expanded','false');}
-function togglePicker(){const open=pickerMenu.classList.contains('hidden');pickerMenu.classList.toggle('hidden',!open);pickerButton.setAttribute('aria-expanded',String(open));}
+function openPicker(){
+  pickerMenu.classList.remove('hidden');
+  pickerButton.setAttribute('aria-expanded','true');
+}
+function closePicker(){
+  pickerMenu.classList.add('hidden');
+  pickerButton.setAttribute('aria-expanded','false');
+}
+function togglePicker(){
+  const open=pickerMenu.classList.contains('hidden');
+  if(open){renderPickerMenu();openPicker();}
+  else closePicker();
+}
+function clearTeacherSearch(){
+  if(!searchInput)return;
+  searchInput.value='';
+  searchClear?.classList.add('hidden');
+  renderPickerMenu();
+}
+
 pickerButton.addEventListener('click',togglePicker);
-pickerMenu.addEventListener('click',async e=>{const option=e.target.closest('.teacher-picker-option');if(!option)return;select.value=option.dataset.value;updatePickerButton();closePicker();await load();});
-document.addEventListener('click',e=>{if(!picker.contains(e.target))closePicker();});
+pickerMenu.addEventListener('click',async e=>{
+  const option=e.target.closest('.teacher-picker-option');
+  if(!option)return;
+  select.value=option.dataset.value;
+  clearTeacherSearch();
+  updatePickerButton();
+  closePicker();
+  await load();
+});
+searchInput?.addEventListener('focus',()=>{
+  renderPickerMenu();
+  openPicker();
+});
+searchInput?.addEventListener('input',()=>{
+  searchClear?.classList.toggle('hidden',!searchInput.value);
+  renderPickerMenu();
+  openPicker();
+});
+searchInput?.addEventListener('keydown',async e=>{
+  if(e.key==='Escape'){clearTeacherSearch();closePicker();searchInput.blur();return;}
+  if(e.key!=='Enter')return;
+  const first=filteredOptions()[0];
+  if(!first)return;
+  e.preventDefault();
+  select.value=first.value;
+  clearTeacherSearch();
+  updatePickerButton();
+  closePicker();
+  searchInput.blur();
+  await load();
+});
+searchClear?.addEventListener('click',e=>{
+  e.preventDefault();
+  e.stopPropagation();
+  clearTeacherSearch();
+  searchInput.focus();
+  openPicker();
+});
+document.addEventListener('click',e=>{
+  if(!picker.contains(e.target)&&!e.target.closest('.teacher-search'))closePicker();
+});
 
 function selectedIdentity(){return currentOptions.find(x=>x.value===select.value)||{value:select.value,baseCode:select.value,subjects:null,classes:null,fullName:select.value,displayCode:select.value};}
 function matchesIdentity(lesson,identity){if(identity.subjects&&!identity.subjects.includes(lesson.subject))return false;if(identity.classes&&!identity.classes.includes(lesson.className))return false;return true;}
