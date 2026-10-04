@@ -106,9 +106,23 @@ export function showToast(message, error=false){
   setTimeout(()=>el.remove(),4200);
 }
 
+const GRADUATION_SUBJECT_CODES=new Set(['T','V','H','L','S','Tin','SU','Đ','A','P','N','TQ']);
+
+function lessonDisplaySubject(item){
+  const subject=String(item?.subject||'');
+  const className=String(item?.className||'').trim();
+  const isGrade12=/^12(?:\\s|$)/.test(className);
+  const isAfternoon=String(item?.session||'')==='Chiều';
+  if(isGrade12&&isAfternoon&&GRADUATION_SUBJECT_CODES.has(subject)){
+    return {code:'Ôn TN',full:'Ôn tốt nghiệp'};
+  }
+  return {code:subject,full:subjectName(subject)};
+}
+
 function lessonMarkup(item,mode,multiple=false){
-  const code=escapeHtml(item.subject);
-  const full=escapeHtml(subjectName(item.subject));
+  const display=lessonDisplaySubject(item);
+  const code=escapeHtml(display.code);
+  const full=escapeHtml(display.full);
   if(mode==='class'){
     const teacherCode=escapeHtml(item.teacherCode||'');
     const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.className,item.teacherName||''));
