@@ -7,78 +7,121 @@
 .desktop-schedule{display:block}.mobile-schedule{display:none}.schedule-wrap{width:100%;overflow:auto;border:1px solid #9fb0a7!important;border-radius:0!important;background:#fff!important}.schedule{width:100%;min-width:920px;border-collapse:collapse!important;border-spacing:0!important;table-layout:fixed}.schedule th,.schedule td{border:1px solid #b9c6c0!important;background:#fff!important;vertical-align:middle!important}.schedule thead th{position:sticky;top:0;z-index:3;padding:9px 7px!important;background:#fff!important;color:#153329!important;text-align:center;font-size:12.5px;font-weight:900}.schedule .slot{position:sticky;left:0;z-index:2;width:68px!important;min-width:68px!important;background:#fff!important;text-align:center}.schedule thead .slot{z-index:4}.schedule td{height:72px!important;padding:4px!important}.period-pill{display:inline-block!important;width:auto!important;height:auto!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:#153329!important;font-size:12px!important;font-weight:900}.afternoon .period-pill{color:#315f92!important}
 .lesson.compact{min-height:56px!important;padding:5px 4px!important;border:0!important;border-radius:0!important;background:#fff!important;box-shadow:none!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;text-align:center}.lesson.compact+.lesson.compact{margin-top:4px!important;padding-top:8px!important;border-top:1px dashed #c5cec9!important}.lesson.compact.multiple{box-shadow:none!important}.lesson-main{font-size:16px!important;line-height:1.15!important;font-weight:900!important;color:#102638!important;letter-spacing:.01em;overflow-wrap:anywhere}.lesson-secondary{font-size:13px!important;line-height:1.2!important;font-weight:850!important;color:#ef4b32!important;overflow-wrap:anywhere}.empty{min-height:54px!important;background:#fff!important;color:#a8b2ad!important;font-size:12px!important}
 
-/* ===== Tablet/mobile: mặc định xem TOÀN CỤC, không thanh cuộn ngang ===== */
+/* ===== Tablet/mobile: bảng toàn cục thật sự, KHÔNG thanh cuộn ===== */
 @media(max-width:999px){
-  html,body{max-width:100%;overflow-x:hidden}
+  html,body{max-width:100%;overflow-x:hidden!important}
   .shell{padding-left:4px!important;padding-right:4px!important}
-  .shell,.card,.table-card,.controls,.admin-card,.teacher-summary{min-width:0;max-width:100%}
-  .desktop-schedule{display:block!important}
+  .shell,.card,.table-card,.controls,.admin-card,.teacher-summary{min-width:0!important;max-width:100%!important}
+  .desktop-schedule{display:block!important;width:100%!important;max-width:100%!important;overflow:hidden!important}
   .mobile-schedule{display:none!important}
-  .session-panel{padding:12px 4px 0}.session-panel:last-child{padding-bottom:12px}
-  .session-heading{align-items:center!important;gap:8px!important}
-  .session-heading-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
-  .mobile-view-switch{display:inline-flex;align-items:center;padding:2px;border:1px solid #c8d4ce;border-radius:9px;background:#f4f7f5;white-space:nowrap}
-  .mobile-view-btn{min-height:30px;padding:0 9px;border:0;border-radius:7px;background:transparent;color:#5c7067;font-size:11px;font-weight:850;cursor:pointer}
-  .mobile-view-btn.active{background:#fff;color:#17352b;box-shadow:0 1px 4px rgba(20,55,42,.12)}
+  .session-panel{padding:12px 4px 0!important;overflow:hidden!important}
+  .session-panel:last-child{padding-bottom:12px!important}
+  .session-heading{padding:7px 3px!important;align-items:flex-end!important}
+  .session-note{font-size:10px!important}
+
   .schedule-wrap{
+    display:block!important;
     width:100%!important;
     max-width:100%!important;
+    min-width:0!important;
+    overflow:hidden!important;
+    overflow-x:hidden!important;
+    overflow-y:hidden!important;
+    scrollbar-width:none!important;
+    -ms-overflow-style:none!important;
     border:1px solid #9fb0a7!important;
-    overflow:hidden!important;
-    scrollbar-width:none;
-    -ms-overflow-style:none;
   }
-  .schedule-wrap::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
-  .schedule{width:100%!important;min-width:920px!important;table-layout:fixed!important}
-  .desktop-schedule[data-mobile-view="overview"] .schedule-wrap{
-    overflow:hidden!important;
-    touch-action:pan-y;
+  .schedule-wrap::-webkit-scrollbar{
+    display:none!important;
+    width:0!important;
+    height:0!important;
   }
-  .desktop-schedule[data-mobile-view="overview"] .schedule{
-    will-change:transform;
-  }
-  .desktop-schedule[data-mobile-view="overview"] .schedule thead th,
-  .desktop-schedule[data-mobile-view="overview"] .schedule .slot{
-    position:static!important;
-  }
-  .desktop-schedule[data-mobile-view="detail"] .schedule-wrap{
-    overflow-x:auto!important;
-    overflow-y:visible!important;
-    -webkit-overflow-scrolling:touch;
-    overscroll-behavior-x:contain;
-    touch-action:pan-x pan-y;
-    scrollbar-width:thin;
-  }
-  .desktop-schedule[data-mobile-view="detail"] .schedule-wrap::-webkit-scrollbar{
-    display:block!important;height:7px!important
-  }
-  .desktop-schedule[data-mobile-view="detail"] .schedule thead th{position:sticky!important;top:0!important}
-  .desktop-schedule[data-mobile-view="detail"] .schedule .slot{position:sticky!important;left:0!important}
-  .teacher-summary-grid{grid-template-columns:1fr 1fr}.teacher-detail{grid-column:span 1}
-  .table-title{min-width:0}.table-actions{max-width:100%}.table-actions small{overflow-wrap:anywhere}
-}
 
-@media(min-width:1000px){
-  .mobile-view-switch{display:none!important}
-  .session-heading-tools{display:flex;align-items:center;gap:8px}
+  .schedule{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    table-layout:fixed!important;
+    border-collapse:collapse!important;
+    transform:none!important;
+  }
+  .schedule col{width:auto!important}
+  .schedule th,.schedule td{
+    min-width:0!important;
+    max-width:none!important;
+    overflow:hidden!important;
+    padding:3px 2px!important;
+  }
+  .schedule thead th{
+    position:static!important;
+    top:auto!important;
+    height:30px!important;
+    padding:5px 1px!important;
+    font-size:9.5px!important;
+    line-height:1.05!important;
+    white-space:nowrap!important;
+  }
+  .schedule .slot,
+  .schedule thead .slot{
+    position:static!important;
+    left:auto!important;
+    width:34px!important;
+    min-width:34px!important;
+    max-width:34px!important;
+  }
+  .schedule td{
+    height:58px!important;
+  }
+  .period-pill{
+    font-size:9.5px!important;
+    line-height:1!important;
+  }
+  .lesson.compact{
+    min-height:46px!important;
+    padding:3px 1px!important;
+    gap:2px!important;
+    overflow:hidden!important;
+  }
+  .lesson-main{
+    font-size:11.5px!important;
+    line-height:1.05!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:break-word!important;
+  }
+  .lesson-secondary{
+    font-size:9px!important;
+    line-height:1.05!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:break-word!important;
+  }
+  .empty{
+    min-height:42px!important;
+    font-size:9px!important;
+  }
+
+  .teacher-summary-grid{grid-template-columns:1fr 1fr!important}
+  .teacher-detail{grid-column:1/-1!important}
+  .table-title{min-width:0!important}
+  .table-actions{max-width:100%!important}
 }
 
 @media(max-width:640px){
-  .session-panel{padding-left:2px;padding-right:2px}
+  .session-panel{padding-left:2px!important;padding-right:2px!important}
   .session-heading{padding:5px 2px!important}
-  .session-heading h3{font-size:17px}
-  .session-note{display:none!important}
-  .mobile-view-btn{min-height:28px;padding:0 8px;font-size:10.5px}
-  .schedule-wrap{border-left:1px solid #9fb0a7!important;border-right:1px solid #9fb0a7!important}
-  .schedule{min-width:920px!important}
-  .schedule thead th{font-size:12.5px!important;padding:9px 7px!important}
-  .schedule td{height:72px!important;padding:4px!important}
-  .schedule .slot{width:68px!important;min-width:68px!important}
-  .lesson.compact{min-height:56px!important;padding:5px 4px!important}
-  .lesson-main{font-size:16px!important}
-  .lesson-secondary{font-size:13px!important}
-  .teacher-summary{padding:10px}.teacher-summary-grid{grid-template-columns:1fr 1fr}.teacher-detail{grid-column:1/-1}.teacher-stat strong{font-size:22px}
-  .table-actions{width:auto!important;justify-content:flex-end!important;align-items:center!important}.table-actions .btn{width:auto;flex:0 0 auto}
+  .session-heading h3{font-size:17px!important}
+  .session-note{font-size:9.5px!important}
+  .schedule thead th{font-size:8.8px!important;padding:4px 1px!important}
+  .schedule .slot,.schedule thead .slot{width:30px!important;min-width:30px!important;max-width:30px!important}
+  .schedule td{height:54px!important;padding:2px 1px!important}
+  .period-pill{font-size:9px!important}
+  .lesson.compact{min-height:42px!important;padding:2px 1px!important}
+  .lesson-main{font-size:10.5px!important}
+  .lesson-secondary{font-size:8.3px!important}
+  .empty{min-height:38px!important;font-size:8.5px!important}
+  .teacher-summary{padding:10px!important}
+  .teacher-stat strong{font-size:20px!important}
 }
 
 /* ===== Các hàng dữ liệu/card quản trị cũng phải xuống dòng an toàn ===== */
