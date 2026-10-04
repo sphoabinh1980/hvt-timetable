@@ -14,3 +14,148 @@
 @media(max-width:640px){.teacher-picker-menu{position:fixed;left:12px;right:12px;top:16%;max-height:70vh}.teacher-picker-option{padding:12px}.teacher-picker-option strong{font-size:15px}.teacher-picker-button strong{font-size:16px}.print-mode .shell{padding:8px!important}.table-title{flex-direction:row!important;padding:9px 11px!important;min-height:60px!important}.table-title h2{font-size:19px!important}.table-title #homeroom,.table-title #teacherMeta{font-size:12px!important}.table-actions{width:auto!important;justify-content:flex-end!important}.table-actions .btn{height:36px!important;padding:0 11px!important;font-size:13px!important}.teacher-summary{padding:6px 9px!important}.teacher-summary-grid{gap:5px 8px!important}.teacher-stat strong{font-size:14px!important}.teacher-stat.primary strong::after,.teacher-stat:not(.primary) strong::after{font-size:11px}.teacher-detail{flex-basis:100%!important}.teacher-detail>span{font-size:10.5px!important}.teacher-chip{font-size:10.5px!important;padding:2px 5px!important}}
 
 @media print{.print-mode-bar{display:none!important}.table-title{min-height:0!important;padding:0 0 1.2mm!important}.table-title h2{font-size:13.5pt!important}.table-title #homeroom,.table-title #teacherMeta{font-size:7.2pt!important}.table-actions{display:none!important}.session-panel.morning .session-heading,.session-panel.afternoon .session-heading{background:#fff!important;border-bottom:1px solid #000!important}.session-panel.morning .session-kicker,.session-panel.morning .session-heading h3,.session-panel.morning .session-note,.session-panel.afternoon .session-kicker,.session-panel.afternoon .session-heading h3,.session-panel.afternoon .session-note{color:#000!important}}
+
+
+/* MOBILE-TKB-FINAL-FIT-V1 */
+@media(max-width:999px){
+  .student-page #scheduleCard,
+  .teacher-page #scheduleCard,
+  .student-page #schedule,
+  .teacher-page #schedule,
+  .student-page #schedule .session-panel,
+  .teacher-page #schedule .session-panel,
+  .student-page #schedule .desktop-schedule,
+  .teacher-page #schedule .desktop-schedule,
+  .student-page #schedule .schedule-wrap,
+  .teacher-page #schedule .schedule-wrap{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+  }
+
+  .student-page #schedule .mobile-schedule,
+  .teacher-page #schedule .mobile-schedule{
+    display:none!important;
+  }
+
+  .student-page #schedule .desktop-schedule,
+  .teacher-page #schedule .desktop-schedule{
+    display:block!important;
+  }
+
+  .student-page #schedule .schedule,
+  .teacher-page #schedule .schedule{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    table-layout:fixed!important;
+    border-collapse:collapse!important;
+    transform:none!important;
+    margin:0!important;
+  }
+
+  .student-page #schedule .schedule th,
+  .student-page #schedule .schedule td,
+  .teacher-page #schedule .schedule th,
+  .teacher-page #schedule .schedule td{
+    min-width:0!important;
+    max-width:none!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+  }
+
+  .student-page #schedule .schedule .slot,
+  .student-page #schedule .schedule thead .slot,
+  .teacher-page #schedule .schedule .slot,
+  .teacher-page #schedule .schedule thead .slot{
+    position:static!important;
+    left:auto!important;
+    width:30px!important;
+    min-width:30px!important;
+    max-width:30px!important;
+  }
+
+  .student-page #schedule .schedule thead th,
+  .teacher-page #schedule .schedule thead th{
+    position:static!important;
+    top:auto!important;
+    padding:4px 1px!important;
+    font-size:8.8px!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+  }
+
+  .student-page #schedule .schedule td,
+  .teacher-page #schedule .schedule td{
+    height:54px!important;
+    padding:2px 1px!important;
+  }
+
+  .student-page #schedule .lesson.compact,
+  .teacher-page #schedule .lesson.compact{
+    min-height:42px!important;
+    padding:2px 1px!important;
+    gap:2px!important;
+    overflow:hidden!important;
+  }
+
+  .student-page #schedule .lesson-main,
+  .teacher-page #schedule .lesson-main{
+    font-size:10.5px!important;
+    line-height:1.05!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:break-word!important;
+  }
+
+  .student-page #schedule .lesson-secondary,
+  .teacher-page #schedule .lesson-secondary{
+    font-size:8.3px!important;
+    line-height:1.05!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:break-word!important;
+  }
+
+  .student-page #schedule .period-pill,
+  .teacher-page #schedule .period-pill{
+    font-size:9px!important;
+  }
+
+  .student-page #schedule .empty,
+  .teacher-page #schedule .empty{
+    min-height:38px!important;
+    font-size:8.5px!important;
+  }
+
+  /* Trang GV có summary riêng: ép co trong card để không kéo rộng bảng */
+  .teacher-page #teacherSummary,
+  .teacher-page .teacher-summary-grid,
+  .teacher-page .teacher-detail,
+  .teacher-page .teacher-chips{
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  .teacher-page .teacher-chip{
+    max-width:100%!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  /* Không cho bất kỳ thanh cuộn nội bộ nào xuất hiện trong TKB */
+  .student-page #schedule .schedule-wrap,
+  .teacher-page #schedule .schedule-wrap{
+    overflow-x:hidden!important;
+    overflow-y:hidden!important;
+    scrollbar-width:none!important;
+    -ms-overflow-style:none!important;
+  }
+  .student-page #schedule .schedule-wrap::-webkit-scrollbar,
+  .teacher-page #schedule .schedule-wrap::-webkit-scrollbar{
+    display:none!important;
+    width:0!important;
+    height:0!important;
+  }
+}
