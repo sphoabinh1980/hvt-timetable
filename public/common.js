@@ -108,7 +108,7 @@ export function showToast(message, error=false){
 
 function rawLessonParts(item){
   const raw=String(item?.raw||'').trim();
-  const match=raw.match(/^(.+?)\\s+-\\s+(.+)$/);
+  const match=raw.match(/^(.+?)\s+-\s+(.+)$/);
   if(match) return {subject:match[1].trim(),teacherCode:match[2].trim()};
   return {subject:raw||String(item?.subject||'').trim(),teacherCode:''};
 }
