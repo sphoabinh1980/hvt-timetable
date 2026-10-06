@@ -12,7 +12,7 @@ const SUBJECT_NAMES={
   'A':'Tiếng Anh','A1':'Tiếng Anh','P':'Tiếng Pháp','N':'Tiếng Nga','TQ':'Tiếng Trung',
   'CN':'Công nghệ','GDTC':'Giáo dục thể chất','GDQP':'GDQP-AN','QPAN':'GDQP-AN',
   'GDKT&PL':'Giáo dục KT&PL','KTPL':'Giáo dục KT&PL','GDĐP':'Giáo dục địa phương','GDĐP1':'Giáo dục địa phương',
-  'TrN':'Hoạt động trải nghiệm','TrNg':'Hoạt động trải nghiệm','Nâng cao':'Nâng cao','Nângcao':'Nâng cao','ÔnTN':'Ôn tốt nghiệp'
+  'TrN':'Hoạt động trải nghiệm','TrNg':'Hoạt động trải nghiệm','Nâng cao':'Nâng cao','Nângcao':'Nâng cao','ÔnTN':'Ôn tốt nghiệp','Ôn TN':'Ôn tốt nghiệp'
 };
 
 const TEACHER_NAMES={
@@ -106,25 +106,26 @@ export function showToast(message, error=false){
   setTimeout(()=>el.remove(),4200);
 }
 
-const GRADUATION_SUBJECT_CODES=new Set(['T','V','H','L','S','Tin','SU','Đ','A','P','N','TQ']);
+function rawLessonParts(item){
+  const raw=String(item?.raw||'').trim();
+  const match=raw.match(/^(.+?)\\s+-\\s+(.+)$/);
+  if(match) return {subject:match[1].trim(),teacherCode:match[2].trim()};
+  return {subject:raw||String(item?.subject||'').trim(),teacherCode:''};
+}
 
-function lessonDisplaySubject(item){
-  const subject=String(item?.subject||'');
-  const className=String(item?.className||'').trim();
-  const isGrade12=/^12(?:\\s|$)/.test(className);
-  const isAfternoon=String(item?.session||'')==='Chiều';
-  if(isGrade12&&isAfternoon&&GRADUATION_SUBJECT_CODES.has(subject)){
-    return {code:'Ôn TN',full:'Ôn tốt nghiệp'};
-  }
-  return {code:subject,full:subjectName(subject)};
+function displayTeacherCode(code=''){
+  const value=String(code||'').trim();
+  return value==='N.T.Hòa'?'N.T.Hoà':value;
 }
 
 function lessonMarkup(item,mode,multiple=false){
-  const display=lessonDisplaySubject(item);
-  const code=escapeHtml(display.code);
-  const full=escapeHtml(display.full);
+  const raw=rawLessonParts(item);
+  const subject=raw.subject||String(item?.subject||'').trim();
+  const code=escapeHtml(subject);
+  const full=escapeHtml(subjectName(subject));
   if(mode==='class'){
-    const teacherCode=escapeHtml(item.teacherCode||'');
+    const exactTeacherCode=raw.teacherCode||displayTeacherCode(item.teacherCode);
+    const teacherCode=escapeHtml(exactTeacherCode);
     const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.className,item.teacherName||''));
     return `<div class="lesson compact${multiple?' multiple':''}" title="${full}${teacherFull?' · '+teacherFull:''}">
       <strong class="lesson-main">${code}</strong>
