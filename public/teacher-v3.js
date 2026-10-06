@@ -1,4 +1,4 @@
-import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,subjectName} from './common.js?v=20261004hoa1';
+import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,subjectName} from './common.js?v=20261006excel2';
 import {printSchedule} from './print.js';
 
 const versionSelect=document.querySelector('#versionSelect');
@@ -19,11 +19,11 @@ let currentOptions=[];
 
 const SPLIT_TEACHERS={
   'N.P.Nga':[
-    {value:'N.P.Nga::NINH',baseCode:'N.P.Nga',subjects:['V','TrN','TrNg'],primarySubject:'V',label:'Ninh Phương Nga'},
+    {value:'N.P.Nga::NINH',baseCode:'N.P.Nga',subjects:['V','TrN','TrNg','Ôn TN'],primarySubject:'V',label:'Ninh Phương Nga'},
     {value:'N.P.Nga::NGUYEN',baseCode:'N.P.Nga',subjects:['P'],primarySubject:'P',label:'Nguyễn Phương Nga'}
   ],
   'N.T.Hạnh':[
-    {value:'N.T.Hạnh::V',baseCode:'N.T.Hạnh',subjects:['V'],primarySubject:'V',label:'Nguyễn Thị Hạnh (Ngữ văn)'},
+    {value:'N.T.Hạnh::V',baseCode:'N.T.Hạnh',subjects:['V','Ôn TN'],primarySubject:'V',label:'Nguyễn Thị Hạnh (Ngữ văn)'},
     {value:'N.T.Hạnh::TQ',baseCode:'N.T.Hạnh',subjects:['TQ'],primarySubject:'TQ',label:'Nguyễn Thị Hạnh (Tiếng Trung)'}
   ],
   'V.T.P.Thảo':[
@@ -31,8 +31,8 @@ const SPLIT_TEACHERS={
     {value:'V.T.P.Thảo::VU',baseCode:'V.T.P.Thảo',subjects:['SU'],primarySubject:'SU',label:'Vũ Thị Phương Thảo'}
   ],
   'P.T.Nga':[
-    {value:'P.T.Nga::PHAM_THANH',baseCode:'P.T.Nga',subjects:['V','TrN','TrNg'],classes:['10TIN','10TN','11N','11P'],primarySubject:'V',label:'Phạm Thanh Nga'},
-    {value:'P.T.Nga::PHAM_THI',baseCode:'P.T.Nga',subjects:['V','TrN','TrNg'],classes:['10P','12S','12SỬ','12SU'],primarySubject:'V',label:'Phạm Thị Nga'}
+    {value:'P.T.Nga::PHAM_THANH',baseCode:'P.T.Nga',subjects:['V','TrN','TrNg','Ôn TN'],classes:['10TIN','10TN','11N','11P'],primarySubject:'V',label:'Phạm Thanh Nga'},
+    {value:'P.T.Nga::PHAM_THI',baseCode:'P.T.Nga',subjects:['V','TrN','TrNg','Ôn TN'],classes:['10P','12S','12SỬ','12SU'],primarySubject:'V',label:'Phạm Thị Nga'}
   ]
 };
 
@@ -66,6 +66,10 @@ async function loadVersions(){
   if(preferred) versionSelect.value=preferred;
 }
 
+function visibleTeacherCode(code=''){
+  return String(code||'').trim()==='N.T.Hòa'?'N.T.Hoà':String(code||'').trim();
+}
+
 function teacherOptions(teachers){
   const out=[];
   for(const teacher of teachers){
@@ -73,12 +77,12 @@ function teacherOptions(teachers){
     if(splits){
       for(const split of splits){
         const sc=split.primarySubject;
-        out.push({...split,subjectCode:sc,displayCode:`${sc}-${split.baseCode}`,fullName:split.label});
+        out.push({...split,subjectCode:sc,displayCode:`${sc}-${visibleTeacherCode(split.baseCode)}`,fullName:split.label});
       }
     }else{
       const fullName=NAME_OVERRIDES[teacher.code]||teacher.fullName||teacher.code;
       const sc=PRIMARY_SUBJECT[teacher.code]||subjectCode(teacher.subject);
-      out.push({value:teacher.code,baseCode:teacher.code,subjects:null,classes:null,label:fullName,fullName,subjectCode:sc,displayCode:sc?`${sc}-${teacher.code}`:teacher.code});
+      out.push({value:teacher.code,baseCode:teacher.code,subjects:null,classes:null,label:fullName,fullName,subjectCode:sc,displayCode:sc?`${sc}-${visibleTeacherCode(teacher.code)}`:visibleTeacherCode(teacher.code)});
     }
   }
   return out.sort((a,b)=>{
@@ -261,7 +265,7 @@ async function load(){
     const lessons=data.lessons.filter(x=>matchesIdentity(x,identity));
     document.querySelector('#scheduleTitle').textContent=identity.displayCode;
     document.querySelector('#teacherMeta').textContent=identity.fullName;
-    document.querySelector('#source').textContent='';
+    document.querySelector('#source').textContent=data.version?.sourceFilename?`Nguồn: ${data.version.sourceFilename}`:'';
     renderTeacherSummary(lessons);renderGrid(document.querySelector('#schedule'),lessons,'teacher');card.classList.remove('hidden');
   }catch(e){showToast(e.message,true)}
 }
