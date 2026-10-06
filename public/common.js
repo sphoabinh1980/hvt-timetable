@@ -46,11 +46,11 @@ export function teacherFullName(code='',subject='',className='',fallback=''){
   const cls=String(className||'').trim();
   if(teacherCode==='N.P.Nga'){
     if(subjectCode==='P'||cls==='11P') return 'Nguyễn Phương Nga';
-    if(['V','TrN','TrNg'].includes(subjectCode)) return 'Ninh Phương Nga';
+    return 'Ninh Phương Nga';
   }
   if(teacherCode==='N.T.Hạnh'){
     if(subjectCode==='TQ'||cls==='11TQ') return 'Nguyễn Thị Hạnh (Tiếng Trung)';
-    if(subjectCode==='V'||cls==='12V') return 'Nguyễn Thị Hạnh (Ngữ văn)';
+    if(cls==='12V'||subjectCode==='V'||subjectCode==='Ôn TN') return 'Nguyễn Thị Hạnh (Ngữ văn)';
   }
   if(teacherCode==='V.T.P.Thảo'){
     if(['H','H1','Hóa2'].includes(subjectCode)||cls==='10H') return 'Võ Thị Phương Thảo';
@@ -124,12 +124,13 @@ function lessonMarkup(item,mode,multiple=false){
   const code=escapeHtml(subject);
   const full=escapeHtml(subjectName(subject));
   if(mode==='class'){
-    const exactTeacherCode=raw.teacherCode||displayTeacherCode(item.teacherCode);
+    const exactTeacherCode=raw.teacherCode||'';
     const teacherCode=escapeHtml(exactTeacherCode);
-    const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.className,item.teacherName||''));
+    const teacherFull=exactTeacherCode?escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.className,item.teacherName||'')):'';
+    const secondary=teacherCode?`<span class="lesson-secondary">${teacherCode}</span>`:'';
     return `<div class="lesson compact${multiple?' multiple':''}" title="${full}${teacherFull?' · '+teacherFull:''}">
       <strong class="lesson-main">${code}</strong>
-      <span class="lesson-secondary">${teacherCode}</span>
+      ${secondary}
     </div>`;
   }
   return `<div class="lesson compact${multiple?' multiple':''}" title="${full}">
@@ -157,7 +158,7 @@ function renderDesktopTable(byKey,session,mode){
     for(const day of DAYS){
       const items=byKey.get(`${day}|${period}`)||[];
       html+='<td>';
-      if(!items.length) html+='<div class="empty">—</div>';
+      if(!items.length) html+='<div class="empty" aria-hidden="true"></div>';
       else html+=items.map(item=>lessonMarkup(item,mode,items.length>1)).join('');
       html+='</td>';
     }
@@ -174,7 +175,7 @@ function renderResponsiveCards(byKey,session,mode){
     for(const period of session.periods){
       const items=byKey.get(`${day}|${period}`)||[];
       html+=`<div class="mobile-period-row"><div class="mobile-period-label">T${period}</div><div class="mobile-period-content">`;
-      if(!items.length) html+='<div class="mobile-empty">—</div>';
+      if(!items.length) html+='<div class="mobile-empty" aria-hidden="true"></div>';
       else html+=items.map(item=>lessonMarkup(item,mode,items.length>1)).join('');
       html+='</div></div>';
     }
