@@ -1,4 +1,4 @@
-import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast} from './common.js?v=20261006excel3';
+import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,homeroomFullName} from './common.js?v=20261006v29source';
 import {printSchedule} from './print.js';
 
 const versionSelect=document.querySelector('#versionSelect');
@@ -44,7 +44,7 @@ async function load(){
     if(!ok||!classSelect.value) return;
     const data=await api(`/api/timetable/class?date=${encodeURIComponent(versionSelect.value)}&className=${encodeURIComponent(classSelect.value)}`);
     document.querySelector('#scheduleTitle').textContent=`Lớp ${data.className}`;
-    document.querySelector('#homeroom').textContent=data.homeroom?.code?`GVCN: ${data.homeroom.fullName||data.homeroom.code}`:'';
+    document.querySelector('#homeroom').textContent=data.homeroom?.code?`GVCN: ${homeroomFullName(data.className,data.homeroom.code,data.homeroom.fullName||'')}`:'';
     document.querySelector('#source').textContent=data.version?.sourceFilename?`Nguồn: ${data.version.sourceFilename}`:'';
     renderGrid(document.querySelector('#schedule'),data.lessons,'class');
     card.classList.remove('hidden');
