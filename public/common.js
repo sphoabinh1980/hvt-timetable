@@ -129,7 +129,7 @@ function lessonMarkup(item,mode,multiple=false){
     const teacherFull=escapeHtml(teacherNameForLesson(item.teacherCode,item.subject,item.className,item.teacherName||''));
     return `<div class="lesson compact${multiple?' multiple':''}" title="${full}${teacherFull?' · '+teacherFull:''}">
       <strong class="lesson-main">${code}</strong>
-      <span class="lesson-secondary">${teacherCode || '—'}</span>
+      <span class="lesson-secondary">${teacherCode}</span>
     </div>`;
   }
   return `<div class="lesson compact${multiple?' multiple':''}" title="${full}">
