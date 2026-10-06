@@ -200,7 +200,10 @@ export function parseTimetableWorkbook(buffer) {
     });
   }
 
-  if (!parsedSheets.length) throw new Error('Không tìm thấy sheet lịch theo mẫu Khoi10-S/Khoi10-C/Khoi11-S/...');
+  const requiredSheets=['Khoi10-S','Khoi11-S','Khoi12-S','Khoi10-C','Khoi11-C','Khoi12-C'];
+  const parsedNames=new Set(parsedSheets.map((x)=>x.sheetName));
+  const missingSheets=requiredSheets.filter((x)=>!parsedNames.has(x));
+  if (missingSheets.length) throw new Error(`Thiếu sheet thời khóa biểu: ${missingSheets.join(', ')}.`);
   if (!lessons.length) throw new Error('Không đọc được ô thời khóa biểu nào từ file Excel.');
 
   const uniqueClassInfo = new Map();
