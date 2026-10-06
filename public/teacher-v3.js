@@ -1,4 +1,4 @@
-import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,subjectName} from './common.js?v=20261006excel3';
+import {api,todayLocal,formatDate,renderGrid,setupBrand,escapeHtml,showToast,subjectName} from './common.js?v=20261006v29source';
 import {printSchedule} from './print.js';
 
 const versionSelect=document.querySelector('#versionSelect');
@@ -19,16 +19,16 @@ let currentOptions=[];
 
 const SPLIT_TEACHERS={
   'N.P.Nga':[
-    {value:'N.P.Nga::NINH',baseCode:'N.P.Nga',subjects:['V','TrN','TrNg','Ôn TN'],primarySubject:'V',label:'Ninh Phương Nga'},
-    {value:'N.P.Nga::NGUYEN',baseCode:'N.P.Nga',subjects:['P'],primarySubject:'P',label:'Nguyễn Phương Nga'}
+    {value:'N.P.Nga::NINH',baseCode:'N.P.Nga',subjects:['V','TrN','TrNg','Ôn TN'],classes:['10A1','12N','12V'],primarySubject:'V',label:'Ninh Phương Nga'},
+    {value:'N.P.Nga::NGUYEN',baseCode:'N.P.Nga',subjects:['P'],classes:['11P'],primarySubject:'P',label:'Nguyễn Phương Nga'}
   ],
   'N.T.Hạnh':[
-    {value:'N.T.Hạnh::V',baseCode:'N.T.Hạnh',subjects:['V','Ôn TN'],primarySubject:'V',label:'Nguyễn Thị Hạnh (Ngữ văn)'},
-    {value:'N.T.Hạnh::TQ',baseCode:'N.T.Hạnh',subjects:['TQ'],primarySubject:'TQ',label:'Nguyễn Thị Hạnh (Tiếng Trung)'}
+    {value:'N.T.Hạnh::V',baseCode:'N.T.Hạnh',subjects:['V','Ôn TN'],classes:['12V'],primarySubject:'V',label:'Nguyễn Thị Hạnh (Ngữ văn)'},
+    {value:'N.T.Hạnh::TQ',baseCode:'N.T.Hạnh',subjects:['TQ'],classes:['11TQ'],primarySubject:'TQ',label:'Nguyễn Thị Hạnh (Tiếng Trung)'}
   ],
   'V.T.P.Thảo':[
-    {value:'V.T.P.Thảo::VO',baseCode:'V.T.P.Thảo',subjects:['H','H1','Hóa2'],primarySubject:'H',label:'Võ Thị Phương Thảo'},
-    {value:'V.T.P.Thảo::VU',baseCode:'V.T.P.Thảo',subjects:['SU'],primarySubject:'SU',label:'Vũ Thị Phương Thảo'}
+    {value:'V.T.P.Thảo::VO',baseCode:'V.T.P.Thảo',subjects:['H','H1','Hóa2'],classes:['10H','11S','12T'],primarySubject:'H',label:'Võ Thị Phương Thảo'},
+    {value:'V.T.P.Thảo::VU',baseCode:'V.T.P.Thảo',subjects:['SU'],classes:['11SỬ','12Đ'],primarySubject:'SU',label:'Vũ Thị Phương Thảo'}
   ],
   'P.T.Nga':[
     {value:'P.T.Nga::PHAM_THANH',baseCode:'P.T.Nga',subjects:['V','TrN','TrNg','Ôn TN'],classes:['10TIN','10TN','11N','11P'],primarySubject:'V',label:'Phạm Thanh Nga'},
@@ -76,7 +76,37 @@ function visibleTeacherCode(code=''){
   return String(code||'').trim()==='N.T.Hòa'?'N.T.Hoà':String(code||'').trim();
 }
 
-function teacherOptions(teachers){
+function sortTeacherOptions(out){
+  return out.sort((a,b)=>{
+    const s=(a.subjectCode||'ZZZ').localeCompare(b.subjectCode||'ZZZ','vi',{numeric:true,sensitivity:'base'});
+    if(s) return s;
+    const c=a.baseCode.localeCompare(b.baseCode,'vi',{numeric:true,sensitivity:'base'});
+    if(c) return c;
+    return a.fullName.localeCompare(b.fullName,'vi',{sensitivity:'base'});
+  });
+}
+
+function profileTeacherOptions(profiles){
+  const counts=new Map();
+  for(const p of profiles) counts.set(p.code,(counts.get(p.code)||0)+1);
+  return profiles.map(p=>{
+    const sc=p.subjectCode||subjectCode(p.subjectName);
+    const duplicated=(counts.get(p.code)||0)>1;
+    return {
+      value:`profile::${p.profileKey}`,
+      baseCode:p.code,
+      subjects:null,
+      classes:duplicated?(p.classes||[]):null,
+      label:p.fullName||p.code,
+      fullName:p.fullName||p.code,
+      subjectCode:sc,
+      displayCode:sc?`${sc}-${visibleTeacherCode(p.code)}`:visibleTeacherCode(p.code),
+      profileKey:p.profileKey
+    };
+  });
+}
+
+function fallbackTeacherOptions(teachers){
   const out=[];
   for(const teacher of teachers){
     const splits=SPLIT_TEACHERS[teacher.code];
@@ -91,13 +121,15 @@ function teacherOptions(teachers){
       out.push({value:teacher.code,baseCode:teacher.code,subjects:null,classes:null,label:fullName,fullName,subjectCode:sc,displayCode:sc?`${sc}-${visibleTeacherCode(teacher.code)}`:visibleTeacherCode(teacher.code)});
     }
   }
-  return out.sort((a,b)=>{
-    const s=(a.subjectCode||'ZZZ').localeCompare(b.subjectCode||'ZZZ','vi',{numeric:true,sensitivity:'base'});
-    if(s) return s;
-    const c=a.baseCode.localeCompare(b.baseCode,'vi',{numeric:true,sensitivity:'base'});
-    if(c) return c;
-    return a.fullName.localeCompare(b.fullName,'vi',{sensitivity:'base'});
-  });
+  return out;
+}
+
+function teacherOptions(teachers,profiles=[]){
+  if(!profiles.length) return sortTeacherOptions(fallbackTeacherOptions(teachers));
+  const fromProfiles=profileTeacherOptions(profiles);
+  const profiledCodes=new Set(profiles.map(p=>p.code));
+  const extras=fallbackTeacherOptions(teachers.filter(t=>!profiledCodes.has(t.code)));
+  return sortTeacherOptions([...fromProfiles,...extras]);
 }
 
 function rowText(x){return `${x.displayCode} — ${x.fullName}`;}
@@ -258,7 +290,7 @@ async function loadOptions(keep=true){
   if(!versionSelect.value){status.innerHTML='';card.classList.add('hidden');msg.innerHTML='<div class="notice">Chưa có phiên bản thời khóa biểu nào.</div>';return false;}
   const old=keep?select.value:'';
   const data=await api(`/api/options?date=${encodeURIComponent(versionSelect.value)}`);
-  renderPicker(teacherOptions(data.teachers),old);
+  renderPicker(teacherOptions(data.teachers,data.teacherProfiles||[]),old);
   if(!data.version){status.innerHTML='';card.classList.add('hidden');msg.innerHTML='<div class="notice">Không tìm thấy thời khóa biểu của ngày áp dụng đã chọn.</div>';return false;}
   status.innerHTML='';msg.innerHTML='';return true;
 }
