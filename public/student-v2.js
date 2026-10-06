@@ -16,8 +16,14 @@ function chooseDefaultVersion(){
 }
 
 async function loadVersions(){
-  versions=await api('/api/versions');
-  versionSelect.innerHTML=versions.map(v=>`<option value="${escapeHtml(v.effectiveDate)}">${formatDate(v.effectiveDate)}</option>`).join('');
+  const rows=await api('/api/versions');
+  const latestByDate=new Map();
+  for(const v of rows) if(!latestByDate.has(v.effectiveDate)) latestByDate.set(v.effectiveDate,v);
+  versions=[...latestByDate.values()];
+  versionSelect.innerHTML=versions.map(v=>{
+    const source=v.sourceFilename?` · ${v.sourceFilename}`:'';
+    return `<option value="${escapeHtml(v.effectiveDate)}">${formatDate(v.effectiveDate)}${escapeHtml(source)}</option>`;
+  }).join('');
   const preferred=chooseDefaultVersion();
   if(preferred) versionSelect.value=preferred;
 }
