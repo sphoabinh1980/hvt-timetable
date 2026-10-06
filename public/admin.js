@@ -1,4 +1,4 @@
-import {api,todayLocal,formatDate,setupBrand,escapeHtml,showToast} from './common.js';
+import {api,todayLocal,formatDate,setupBrand,escapeHtml,showToast} from './common.js?v=20261006v29source';
 
 const loginView=document.querySelector('#loginView');
 const adminView=document.querySelector('#adminView');
@@ -61,7 +61,8 @@ if(uploadForm) uploadForm.onsubmit=async(e)=>{
       body:new FormData(form)
     });
     if(importResult){
-      importResult.innerHTML=`<span class="badge"><span class="dot"></span>${data.lessonCount} ô · ${data.classCount} lớp · phiên bản #${data.versionId}</span>`;
+      const source=fileInput?.files?.[0]?.name||'';
+      importResult.innerHTML=`<span class="badge"><span class="dot"></span>${data.lessonCount} ô · ${data.classCount} lớp · ${data.teacherProfileCount||0} hồ sơ GV${source?` · ${escapeHtml(source)}`:''} · phiên bản #${data.versionId}</span>`;
     }
     showToast('Đã import thời khóa biểu');
     if(fileInput) fileInput.value='';
