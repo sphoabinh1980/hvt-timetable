@@ -102,12 +102,20 @@ app.get('/api/options', async (req, res) => {
   const date = requestedDate(req);
   const version = await store.resolveVersion(date);
   if (!version) return res.json({ date, version: null, classes: [], teachers: [] });
-  const { classes, teachers } = await store.getOptions(version.id);
+  const { classes, teachers, profiles = [] } = await store.getOptions(version.id);
   res.json({
     date,
     version: versionPayload(version),
     classes: classes.map((x) => ({ name: x.class_name, grade: x.grade, homeroomTeacherCode: x.homeroom_teacher_code, homeroomTeacherName: x.homeroom_name })),
-    teachers: teachers.map((x) => ({ code: x.code, fullName: x.full_name, subject: x.subject, displayName: x.full_name ? `${x.full_name} (${x.code})` : x.code }))
+    teachers: teachers.map((x) => ({ code: x.code, fullName: x.full_name, subject: x.subject, displayName: x.full_name ? `${x.full_name} (${x.code})` : x.code })),
+    teacherProfiles: profiles.map((x) => ({
+      profileKey: x.profile_key,
+      code: x.code,
+      fullName: x.full_name,
+      subjectCode: x.subject_code,
+      subjectName: x.subject_name,
+      classes: Array.isArray(x.class_names) ? x.class_names : []
+    }))
   });
 });
 
@@ -170,7 +178,7 @@ app.post('/api/admin/upload-timetable', adminOnly, upload.single('file'), async 
     const hash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
     const name = String(req.body.name || '').trim() || `TKB áp dụng ${effectiveDate}`;
     const versionId = await store.importVersion({ name, effectiveDate, filename: req.file.originalname, fileHash: hash, importedBy: req.admin, parsed });
-    res.json({ ok: true, versionId, lessonCount: parsed.lessons.length, classCount: parsed.classInfo.length, sheets: parsed.parsedSheets });
+    res.json({ ok: true, versionId, lessonCount: parsed.lessons.length, classCount: parsed.classInfo.length, teacherProfileCount: parsed.teacherProfiles?.length || 0, sheets: parsed.parsedSheets });
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: error.message || 'Không thể đọc file Excel.' });
