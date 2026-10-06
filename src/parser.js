@@ -29,11 +29,93 @@ function parseLesson(value) {
   return { raw, subject: match[1].trim(), teacherCode: match[2].trim() };
 }
 
-function normalizeTeacherCode(className, subject, teacherCode) {
-  if (!teacherCode) return teacherCode;
-  let code = String(teacherCode).trim();
+function canonicalTeacherCode(value) {
+  if (!value) return null;
+  let code = String(value).replace(/\s+/g, '').trim();
+  if (!code) return null;
   if (code === 'N.T.Hoà') code = 'N.T.Hòa';
   return code;
+}
+
+function abbreviateName(value) {
+  const parts = String(value ?? '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '';
+  if (parts.length === 1) return canonicalTeacherCode(parts[0]) || '';
+  return canonicalTeacherCode(`${parts.slice(0, -1).map((x) => x[0]).join('.')}.${parts.at(-1)}`) || '';
+}
+
+const SUBJECT_CODE_BY_NAME = new Map([
+  ['toan','T'],['ngu van','V'],['van','V'],['vat li','L'],['ly','L'],['hoa hoc','H'],['hoa','H'],
+  ['sinh hoc','S'],['sinh','S'],['tin hoc','TN'],['tin','TN'],['lich su','SU'],['su','SU'],
+  ['dia li','Đ'],['dia','Đ'],['tieng anh','A'],['anh','A'],['tieng phap','P'],['phap','P'],
+  ['tieng nga','N'],['nga','N'],['tieng trung','TQ'],['trung','TQ'],['cong nghe','CN'],
+  ['gdkt&pl','KTPL'],['giao duc kt&pl','KTPL'],['gdqp-an','GDQP'],['giao duc quoc phong-an ninh','GDQP']
+]);
+
+function subjectCodeFromName(value) {
+  const key = norm(value);
+  return SUBJECT_CODE_BY_NAME.get(key) || String(value ?? '').trim();
+}
+
+const CLASS_SUFFIX = new Map([
+  ['toan1','T1'],['toan 1','T1'],['toan2','T2'],['toan 2','T2'],['toan','T'],
+  ['ly','L'],['vat ly','L'],['hoa','H'],['hoa hoc','H'],['sinh','S'],['sinh hoc','S'],
+  ['tin','TIN'],['tin hoc','TIN'],['van1','V1'],['van 1','V1'],['van2','V2'],['van 2','V2'],['van','V'],
+  ['su','SỬ'],['lich su','SỬ'],['dia','Đ'],['dia li','Đ'],['anh1','A1'],['anh 1','A1'],
+  ['anh2','A2'],['anh 2','A2'],['anh','A'],['phap','P'],['nga','N'],['trung','TQ']
+]);
+
+function classCodeFromLongName(value) {
+  const raw = String(value ?? '').trim();
+  const match = raw.match(/^(\d{2})\s+(.+)$/);
+  if (!match) return null;
+  const suffix = CLASS_SUFFIX.get(norm(match[2]));
+  return suffix ? `${match[1]}${suffix}` : null;
+}
+
+function parseTeacherProfiles(workbook) {
+  const worksheet = workbook.Sheets.KIEM_TRA_PHAN_CONG;
+  if (!worksheet) return [];
+  const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null, raw: false });
+  if (!rows.length) return [];
+  const headerIndex = rows.findIndex((row) => {
+    const h = row.map(norm);
+    return h.includes('lop') && h.includes('mon') && h.some((x) => x === 'giao vien');
+  });
+  if (headerIndex < 0) return [];
+  const headers = rows[headerIndex].map(norm);
+  const classCol = headers.indexOf('lop');
+  const subjectCol = headers.indexOf('mon');
+  const teacherCol = headers.indexOf('giao vien');
+  if (classCol < 0 || subjectCol < 0 || teacherCol < 0) return [];
+
+  const grouped = new Map();
+  for (let r = headerIndex + 1; r < rows.length; r += 1) {
+    const classLong = String(rows[r]?.[classCol] ?? '').trim();
+    const subjectName = String(rows[r]?.[subjectCol] ?? '').trim();
+    const fullName = String(rows[r]?.[teacherCol] ?? '').trim();
+    if (!classLong || !subjectName || !fullName) continue;
+    const code = abbreviateName(fullName);
+    if (!code) continue;
+    const subjectCode = subjectCodeFromName(subjectName);
+    const className = classCodeFromLongName(classLong);
+    const profileKey = `${code}|${subjectCode}|${fullName}`;
+    if (!grouped.has(profileKey)) {
+      grouped.set(profileKey, {
+        profileKey,
+        teacherCode: code,
+        fullName,
+        subjectCode,
+        subjectName,
+        classNames: new Set()
+      });
+    }
+    if (className) grouped.get(profileKey).classNames.add(className);
+  }
+  return [...grouped.values()].map((x) => ({
+    ...x,
+    classNames: [...x.classNames].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }))
+  }));
 }
 
 function sessionFromSheet(sheetName, row, sessionCol) {
@@ -74,8 +156,13 @@ export function parseTimetableWorkbook(buffer) {
       const className = String(rows[headerIndex][col] ?? '').trim();
       if (!/^\d{2}/.test(className)) continue;
       classCols.push({ col, className });
-      const homeroom = String(rows[headerIndex - 1]?.[col] ?? '').trim() || null;
-      classInfo.push({ grade, className, homeroomTeacherCode: homeroom });
+      const homeroomRaw = String(rows[headerIndex - 1]?.[col] ?? '').trim() || null;
+      classInfo.push({
+        grade,
+        className,
+        homeroomTeacherCode: canonicalTeacherCode(homeroomRaw),
+        homeroomTeacherCodeRaw: homeroomRaw
+      });
     }
 
     let currentDay = null;
@@ -91,7 +178,6 @@ export function parseTimetableWorkbook(buffer) {
       for (const { col, className } of classCols) {
         const parsed = parseLesson(row[col]);
         if (!parsed) continue;
-        const teacherCode = normalizeTeacherCode(className, parsed.subject, parsed.teacherCode);
         lessons.push({
           grade,
           className,
@@ -99,13 +185,19 @@ export function parseTimetableWorkbook(buffer) {
           period,
           session,
           subject: parsed.subject,
-          teacherCode,
+          teacherCode: canonicalTeacherCode(parsed.teacherCode),
           rawValue: parsed.raw
         });
         count += 1;
       }
     }
-    parsedSheets.push({ sheetName, grade, session: main[2].toUpperCase() === 'S' ? 'Sáng' : 'Chiều', classes: classCols.length, lessons: count });
+    parsedSheets.push({
+      sheetName,
+      grade,
+      session: main[2].toUpperCase() === 'S' ? 'Sáng' : 'Chiều',
+      classes: classCols.length,
+      lessons: count
+    });
   }
 
   if (!parsedSheets.length) throw new Error('Không tìm thấy sheet lịch theo mẫu Khoi10-S/Khoi10-C/Khoi11-S/...');
@@ -113,7 +205,8 @@ export function parseTimetableWorkbook(buffer) {
 
   const uniqueClassInfo = new Map();
   for (const item of classInfo) uniqueClassInfo.set(item.className, item);
-  return { lessons, classInfo: [...uniqueClassInfo.values()], parsedSheets };
+  const teacherProfiles = parseTeacherProfiles(workbook);
+  return { lessons, classInfo: [...uniqueClassInfo.values()], teacherProfiles, parsedSheets };
 }
 
 export function parseTeacherRoster(buffer) {
@@ -139,10 +232,9 @@ export function parseTeacherRoster(buffer) {
 
   const teachers = [];
   for (let r = headerIndex + 1; r < rows.length; r += 1) {
-    let code = String(rows[r][mapping.code] ?? '').trim();
+    const code = canonicalTeacherCode(rows[r][mapping.code]);
     const fullName = String(rows[r][mapping.name] ?? '').trim();
     if (!code || !fullName) continue;
-    if (code === 'N.T.Hoà') code = 'N.T.Hòa';
     const subject = mapping.subject >= 0 ? String(rows[r][mapping.subject] ?? '').trim() : '';
     teachers.push({ code, fullName, subject });
   }
